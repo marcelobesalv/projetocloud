@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup Pronto · Consultor</title>
+<style>
+  :root {
+    --bg: #f4f2ee; --panel: #ffffff; --ink: #1d1f24; --muted: #6b6f78; --line: #e3dfd8;
+    --accent: #1f6f5c; --accent-ink: #ffffff; --me: #1f6f5c; --bot: #f1efea; --warn: #9a5b00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121417; --panel: #1a1d21; --ink: #e8e6e1; --muted: #9a9ea6; --line: #2b2f35;
+            --accent: #4fb39a; --accent-ink: #0d1412; --me: #2c7d69; --bot: #22262b; --warn: #f0b45a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .app { max-width: 820px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding: 0 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 12px; border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 700; letter-spacing: -0.01em; font-size: 18px; }
+  .brand small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  button { font: inherit; cursor: pointer; }
+  .ghost { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 6px 12px; }
+  #log { flex: 1; padding: 18px 0; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; white-space: normal; overflow-wrap: anywhere; }
+  .user { align-self: flex-end; background: var(--me); color: #fff; border-bottom-right-radius: 4px; }
+  .assistant { align-self: flex-start; background: var(--bot); border-bottom-left-radius: 4px; }
+  .assistant ul { margin: 6px 0; padding-left: 20px; }
+  .meta { font-size: 12px; color: var(--warn); margin-top: 4px; }
+  .typing { color: var(--muted); font-style: italic; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
+  .chip { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+  form { display: flex; gap: 8px; padding: 10px 0 18px; position: sticky; bottom: 0; background: var(--bg); }
+  textarea { flex: 1; resize: none; font: inherit; color: var(--ink); background: var(--panel);
+             border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: 46px; max-height: 160px; }
+  .send { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 0 18px; font-weight: 600; }
+  .send:disabled { opacity: .5; cursor: default; }
+  .empty { color: var(--muted); text-align: center; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">Setup Pronto<small>Consultor de periféricos — monte um setup compatível com o seu equipamento</small></div>
+    <button class="ghost" id="nova" type="button">Nova conversa</button>
+  </header>
+  <div id="log"><p class="empty" id="empty">Conte o que você procura e como é o seu computador.</p></div>
+  <div class="chips" id="chips"></div>
+  <form id="form">
+    <textarea id="msg" rows="1" placeholder="Escreva sua mensagem…" maxlength="2000" required></textarea>
+    <button class="send" id="send" type="submit">Enviar</button>
+  </form>
+</div>
+<script>
+const SUGESTOES = [
+  "Tenho um MacBook Air só com USB-C e Bluetooth, uso macOS. Procuro teclado e mouse sem fio.",
+  "Esses são compatíveis com meu Mac? Prefiro layout ABNT2.",
+  "Monta um kit com o teclado, o mouse e um headset.",
+  "Consegue um desconto maior?",
+  "Então adiciona um mousepad.",
+  "Fechado! Pode fazer o pedido no nome de Ana Souza.",
+  "Qual o status do pedido?"
+];
+const log = document.getElementById("log"), form = document.getElementById("form");
+const input = document.getElementById("msg"), send = document.getElementById("send");
+let conversationId = null;
+try { conversationId = sessionStorage.getItem("conversation_id"); } catch (e) {}
+
+function esc(s) { return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function render(texto) {
+  const linhas = esc(texto).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").split("\n");
+  let html = "", lista = false;
+  for (const l of linhas) {
+    if (/^\s*[-•]\s+/.test(l)) { if (!lista) { html += "<ul>"; lista = true; } html += "<li>" + l.replace(/^\s*[-•]\s+/, "") + "</li>"; }
+    else { if (lista) { html += "</ul>"; lista = false; } html += l ? l + "<br>" : "<br>"; }
+  }
+  return html + (lista ? "</ul>" : "");
+}
+function add(role, texto, meta) {
+  document.getElementById("empty")?.remove();
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  div.innerHTML = role === "assistant" ? render(texto) : esc(texto).replace(/\n/g, "<br>");
+  if (meta) { const m = document.createElement("div"); m.className = "meta"; m.textContent = meta; div.appendChild(m); }
+  log.appendChild(div);
+  div.scrollIntoView({ behavior: "smooth", block: "end" });
+  return div;
+}
+function salvarId(id) { conversationId = id; try { id ? sessionStorage.setItem("conversation_id", id) : sessionStorage.removeItem("conversation_id"); } catch (e) {} }
+
+async function enviar(texto) {
+  add("user", texto);
+  send.disabled = true;
+  const typing = add("assistant", "digitando…"); typing.classList.add("typing");
+  try {
+    const r = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversation_id: conversationId, message: texto }) });
+    const data = await r.json();
+    typing.remove();
+    if (!r.ok) { add("assistant", data.erro || "Não foi possível enviar agora.", "erro " + r.status); if (r.status === 404) salvarId(null); return; }
+    salvarId(data.conversation_id);
+    add("assistant", data.resposta, data.status !== "ok" ? "status: " + data.status : null);
+  } catch (e) {
+    typing.remove();
+    add("assistant", "Sem conexão com o servidor. Tente de novo.", "erro de rede");
+  } finally { send.disabled = false; input.focus(); }
+}
+
+form.addEventListener("submit", e => { e.preventDefault(); const t = input.value.trim(); if (!t || send.disabled) return; input.value = ""; enviar(t); });
+input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+document.getElementById("nova").addEventListener("click", () => { salvarId(null); log.innerHTML = '<p class="empty" id="empty">Nova conversa. Como posso ajudar?</p>'; });
+const chips = document.getElementById("chips");
+for (const s of SUGESTOES) { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = s; b.onclick = () => { if (!send.disabled) enviar(s); }; chips.appendChild(b); }
+
+(async () => {
+  if (!conversationId) return;
+  try {
+    const r = await fetch("/conversations/" + conversationId);
+    if (!r.ok) { salvarId(null); return; }
+    for (const m of (await r.json()).mensagens) add(m.role, m.texto);
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

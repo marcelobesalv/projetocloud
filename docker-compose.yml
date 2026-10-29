@@ -1,0 +1,149 @@
+# Ambiente local da Setup Pronto.
+#   docker compose up --build                     -> LLM_PROVIDER=fake, sem nenhuma credencial AWS
+#   docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up --build   -> Bedrock
+#   docker compose --profile test run --rm tests-commerce   (idem tests-worker, tests-chat)
+# Senhas abaixo são apenas para desenvolvimento local; sobrescreva-as num arquivo .env.
+name: setup-pronto
+
+x-db: &db
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: setup_pronto
+  DB_SSLMODE: disable
+
+# ElasticMQ não valida assinatura, mas o boto3 precisa de *alguma* credencial para assinar.
+# Estes valores não são credenciais AWS reais e só existem no compose local.
+x-sqs-local: &sqs-local
+  AWS_REGION: ${AWS_REGION:-us-east-2}
+  SQS_ENDPOINT_URL: http://elasticmq:9324
+  SQS_QUEUE_NAME: orders
+  AWS_ACCESS_KEY_ID: local
+  AWS_SECRET_ACCESS_KEY: local
+
+x-test-env: &test-env
+  TEST_DB_ADMIN_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-postgres_local}@postgres:5432/postgres
+  DB_MIGRATIONS_DIR: /db
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: setup_pronto
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_local}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d setup_pronto"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  elasticmq:
+    image: softwaremill/elasticmq-native:1.6.11
+    volumes:
+      - ./elasticmq/elasticmq.conf:/opt/elasticmq.conf:ro
+    ports:
+      - "127.0.0.1:9324:9324"   # API SQS
+      - "127.0.0.1:9325:9325"   # painel com as filas e contagens
+
+  # Job único: cria os usuários de cada serviço, aplica as migrações e o seed, e termina.
+  migrate:
+    build: ./db
+    environment:
+      <<: *db
+      DB_USER: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres_local}
+      CHAT_DB_PASSWORD: ${CHAT_DB_PASSWORD:-chat_local}
+      COMMERCE_DB_PASSWORD: ${COMMERCE_DB_PASSWORD:-commerce_local}
+      WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:-worker_local}
+      SEED_ON_MIGRATE: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  commerce-api:
+    build:
+      context: ./services/commerce-api
+      target: runtime
+    environment:
+      <<: [*db, *sqs-local]
+      DB_USER: commerce_api
+      DB_PASSWORD: ${COMMERCE_DB_PASSWORD:-commerce_local}
+      OUTBOX_PUBLISHER_ENABLED: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    # Serviço interno: sem "ports". Para depurar: docker compose exec commerce-api python -c ...
+    expose:
+      - "8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      elasticmq:
+        condition: service_started
+    restart: unless-stopped
+
+  order-worker:
+    build:
+      context: ./services/order-worker
+      target: runtime
+    environment:
+      <<: [*db, *sqs-local]
+      DB_USER: order_worker
+      DB_PASSWORD: ${WORKER_DB_PASSWORD:-worker_local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    expose:
+      - "8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      elasticmq:
+        condition: service_started
+    restart: unless-stopped
+
+  chat-api:
+    build:
+      context: ./services/chat-api
+      target: runtime
+    environment:
+      <<: *db
+      DB_USER: chat_api
+      DB_PASSWORD: ${CHAT_DB_PASSWORD:-chat_local}
+      COMMERCE_API_URL: http://commerce-api:8080
+      LLM_PROVIDER: fake
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8000:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      commerce-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------- testes (perfil "test")
+  tests-commerce:
+    profiles: ["test"]
+    build: { context: ./services/commerce-api, target: test }
+    environment: *test-env
+    volumes: ["./db:/db:ro"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  tests-worker:
+    profiles: ["test"]
+    build: { context: ./services/order-worker, target: test }
+    environment: *test-env
+    volumes: ["./db:/db:ro"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  tests-chat:
+    profiles: ["test"]
+    build: { context: ./services/chat-api, target: test }
+    environment: *test-env
+    volumes: ["./db:/db:ro"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+volumes:
+  pgdata:

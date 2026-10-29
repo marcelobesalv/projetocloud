@@ -1,0 +1,19 @@
+# Override para usar o Claude Haiku 5.5 no Bedrock com o perfil AWS da sua máquina.
+#
+#   aws sso login --profile $AWS_PROFILE        # se o perfil for SSO / IAM Identity Center
+#   export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) # Linux: para o container ler ~/.aws
+#   docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up --build
+#
+# Só o chat-api recebe ~/.aws, e só neste modo. Montado com escrita porque o boto3 renova o
+# token SSO em ~/.aws/sso/cache. O container continua sem root (usa o seu UID).
+services:
+  chat-api:
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      LLM_PROVIDER: bedrock
+      AWS_PROFILE: ${AWS_PROFILE:?defina AWS_PROFILE com o perfil da sua máquina}
+      AWS_REGION: ${AWS_REGION:-us-east-2}
+      LLM_MODEL_ID: ${LLM_MODEL_ID:-us.anthropic.claude-haiku-5-5}
+      HOME: /home/app
+    volumes:
+      - ${HOME}/.aws:/home/app/.aws

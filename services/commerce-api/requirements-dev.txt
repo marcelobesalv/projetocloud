@@ -1,0 +1,4 @@
+# Só no estágio de teste da imagem / ambiente de desenvolvimento
+pytest==9.1.1
+httpx==0.28.1
+alembic==1.20.1
