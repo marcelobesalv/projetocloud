@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
-DB_DIR = Path(os.environ.get("DB_MIGRATIONS_DIR", Path(__file__).resolve().parents[3] / "db"))
+DB_DIR = Path(os.environ.get("DB_MIGRATIONS_DIR") or Path(__file__).resolve().parents[3] / "db")
 sys.path.insert(0, str(DB_DIR))
 ADMIN_URL = os.environ.get(
     "TEST_DB_ADMIN_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
