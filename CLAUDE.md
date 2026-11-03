@@ -86,14 +86,20 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
   `db/bootstrap.py`. Seed nunca sobrescreve estoque existente.
 - Testes: banco real, nada de mock de banco; SQS e commerce simulados com stubs simples.
 
+## Estado da implantação (nov/2026)
+- **Ohio (us-east-2)**: montado à mão via CloudShell (scripts `s1`–`s6` no home do CloudShell de Ohio), imagem `37791f6`,
+  validado com roteiro completo, teste de carga (2→6 tasks, 3→4 instâncias, 0 erros) e testes de falha (DLQ, commerce fora).
+- **São Paulo (sa-east-1)**: `infra/terraform` (ver o README de lá), em duas fases (`deploy_app`). State local no home do
+  CloudShell de sa-east-1 (`~/tf`). Imagens copiadas de Ohio com `scripts/copiar-imagens.sh`. Roteiro completo validado.
+- Service Connect: o cliente (chat-api) só enxerga os aliases que já existiam quando a task subiu — por isso o
+  `aws_ecs_service.chat` depende do commerce-api. Se o chat responder `commerce_indisponivel` logo após criar os serviços,
+  um `--force-new-deployment` no chat-api resolve.
+
 ## O que ainda falta
-- **Nunca foi feito um `docker build`/`docker compose up` real**: o ambiente onde o código foi escrito bloqueava
-  o Docker Hub. Os serviços foram testados como processos contra Postgres 16 real e SQS simulado (moto).
-  Primeiro passo: subir o compose e corrigir o que aparecer (principalmente ElasticMQ e o build das imagens).
-- **Bedrock real não foi exercitado** (só com Stubber). Validar o prompt e o tool use com o Haiku 5.5 de verdade,
-  e confirmar as permissões IAM do inference profile `global.*`.
-- Infraestrutura como código (VPC, ECS, ALB, RDS, SQS + DLQ, roles, log groups, metric filters) — ver handoff.
+- Página: botão "tentar de novo" após `commerce_indisponivel` (o turno que falha não é gravado, então o contexto se perde).
+- O Haiku às vezes pede confirmação antes de `criar_pedido`; decidir se o prompt deve aceitar "Fechado! Pode fazer o
+  pedido" como confirmação suficiente.
 - Sem autenticação nem rate limiting no `POST /chat`; o histórico em `conversas.mensagens` cresce sem limite.
-- Sem job de reconciliação para pedidos PENDENTE antigos (ex.: outbox com falha persistente) e sem ferramenta
-  para reprocessar mensagens da DLQ.
-- Sem CI (rodar os três pytest + build das imagens a cada push).
+- Sem job de reconciliação para pedidos PENDENTE antigos e sem ferramenta para reprocessar mensagens da DLQ.
+- Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
+- Backend remoto (S3) para o state do Terraform, se mais de uma pessoa for aplicar.
