@@ -58,12 +58,17 @@ ferramenta. Ele entende o roteiro de demonstração abaixo (frases parecidas tam
 ```bash
 aws sso login --profile meu-perfil            # se o perfil for SSO (IAM Identity Center)
 export AWS_PROFILE=meu-perfil AWS_REGION=us-east-2 LLM_MODEL_ID=us.anthropic.claude-haiku-5-5
-export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g)  # Linux: o container precisa ler seus arquivos de ~/.aws
+export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g)  # só no Linux
 docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up --build
 ```
 
-No Windows (PowerShell, Docker Desktop) não é preciso `LOCAL_UID`/`LOCAL_GID`. A pasta montada é
-`$HOME/.aws` ou, se `HOME` não estiver definido, `%USERPROFILE%\.aws`:
+O chat-api roda por padrão como `10001:10001`, o usuário `app` da imagem. **No Linux** o bind mount
+de `~/.aws` respeita as permissões do host, então é preciso exportar `LOCAL_UID`/`LOCAL_GID` com o
+seu próprio UID/GID (`id -u` / `id -g`); sem isso o container não consegue ler as credenciais nem
+renovar o token SSO. No macOS e no Windows (Docker Desktop) o padrão funciona sem variáveis extras.
+
+No Windows (PowerShell) a pasta montada é `$HOME/.aws` ou, se `HOME` não estiver definido,
+`%USERPROFILE%\.aws`:
 
 ```powershell
 aws sso login --profile meu-perfil
@@ -100,6 +105,16 @@ TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/po
 | commerce-api (23) | idempotência do POST /orders (repetição, chave com outro conteúdo → 409, 8 requisições concorrentes → 1 pedido), preço recalculado no servidor, compatibilidade (conexão, adaptador/hub, SO, layout, Hz por porta, VESA/tamanho do suporte), desconto progressivo limitado por produto, outbox com fila fora do ar |
 | order-worker (8) | confirmação, estoque insuficiente em um item → REJEITADO sem reservar nada, reentrega da mesma mensagem só apaga, entregas duplicadas simultâneas, dois pedidos pela última unidade, erro transitório não apaga, mensagem inválida fica para a DLQ |
 | chat-api (9) | tool use com dados do commerce, correlation_id propagado, commerce fora do ar → resposta fixa e turno não gravado, LLM fora, limite de iterações, janela de histórico, idempotency key estável, BedrockProvider (inference profile, toolConfig, erro → LLMError) |
+
+### Status da validação
+
+| Item | Status |
+|---|---|
+| Testes automatizados nos containers (commerce 23, worker 8, chat 9) | ✅ passando |
+| `docker compose up --build` no modo fake: build das 4 imagens, job `migrate`, ElasticMQ e health checks | ✅ testado |
+| Roteiro de demonstração completo no modo fake (kit de R$ 889,64 → R$ 986,40, pedido CONFIRMADO pelo worker) | ✅ testado |
+| Modo Bedrock (`docker-compose.bedrock.yml`) com o Claude Haiku 5.5 real | ✅ testado |
+| Deploy na AWS (ECS + ALB + RDS + SQS) | ⏳ pendente |
 
 ## Roteiro de demonstração
 
