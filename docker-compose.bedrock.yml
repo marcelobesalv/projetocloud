@@ -4,6 +4,7 @@
 #   export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) # Linux: para o container ler ~/.aws
 #   docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up --build
 #
+# A pasta montada é $HOME/.aws; no Windows, sem HOME definido, usa %USERPROFILE%\.aws.
 # Só o chat-api recebe ~/.aws, e só neste modo. Montado com escrita porque o boto3 renova o
 # token SSO em ~/.aws/sso/cache. O container continua sem root (usa o seu UID).
 services:
@@ -16,4 +17,4 @@ services:
       LLM_MODEL_ID: ${LLM_MODEL_ID:-us.anthropic.claude-haiku-5-5}
       HOME: /home/app
     volumes:
-      - ${HOME}/.aws:/home/app/.aws
+      - ${HOME:-${USERPROFILE}}/.aws:/home/app/.aws

@@ -62,6 +62,15 @@ export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g)  # Linux: o container precisa ler s
 docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up --build
 ```
 
+No Windows (PowerShell, Docker Desktop) não é preciso `LOCAL_UID`/`LOCAL_GID`. A pasta montada é
+`$HOME/.aws` ou, se `HOME` não estiver definido, `%USERPROFILE%\.aws`:
+
+```powershell
+aws sso login --profile meu-perfil
+$env:AWS_PROFILE = "meu-perfil"; $env:AWS_REGION = "us-east-2"; $env:LLM_MODEL_ID = "us.anthropic.claude-haiku-5-5"
+docker compose -f docker-compose.yml -f docker-compose.bedrock.yml up --build
+```
+
 | Região      | LLM_MODEL_ID (inference profile)   |
 |-------------|------------------------------------|
 | us-east-2   | `us.anthropic.claude-haiku-5-5`     |
