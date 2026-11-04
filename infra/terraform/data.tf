@@ -1,5 +1,9 @@
 # Fila de pedidos + DLQ, repositórios ECR, log groups, segredos e RDS.
 
+locals {
+  usuarios_db = toset(["chat_api", "commerce_api", "order_worker"])
+}
+
 resource "aws_sqs_queue" "dlq" {
   name                      = "${local.p}-orders-dlq"
   message_retention_seconds = 1209600
@@ -45,22 +49,25 @@ resource "aws_cloudwatch_log_group" "svc" {
 }
 
 # Senha de cada usuário de serviço (o job de migração cria os usuários com elas).
-resource "random_password" "db" {
-  for_each = toset(["chat_api", "commerce_api", "order_worker"])
+# Gerada como recurso efêmero e gravada por argumento write-only: o valor nunca vai para o state.
+# Para trocar as senhas, incremente db_password_version (a migração roda de novo e faz ALTER ROLE).
+ephemeral "random_password" "db" {
+  for_each = local.usuarios_db
   length   = 40
   special  = false
 }
 
 resource "aws_secretsmanager_secret" "db" {
-  for_each                = random_password.db
+  for_each                = local.usuarios_db
   name                    = "${local.p}/db/${each.key}"
   recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "db" {
-  for_each      = random_password.db
-  secret_id     = aws_secretsmanager_secret.db[each.key].id
-  secret_string = each.value.result
+  for_each                 = local.usuarios_db
+  secret_id                = aws_secretsmanager_secret.db[each.key].id
+  secret_string_wo         = ephemeral.random_password.db[each.key].result
+  secret_string_wo_version = var.db_password_version
 }
 
 resource "aws_db_subnet_group" "db" {

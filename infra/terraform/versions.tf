@@ -1,13 +1,13 @@
 terraform {
-  required_version = ">= 1.6"
+  required_version = ">= 1.11" # write-only (senhas fora do state) e lockfile no S3
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.70"
+      version = "~> 5.90"
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.6"
+      version = "~> 3.7" # ephemeral random_password
     }
   }
 }

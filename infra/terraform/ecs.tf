@@ -12,7 +12,7 @@ resource "aws_ecs_cluster" "main" {
   }
   setting {
     name  = "containerInsights"
-    value = "disabled"
+    value = "enabled" # RunningTaskCount por serviço (alarme de saúde das tasks)
   }
 }
 
@@ -57,6 +57,11 @@ resource "aws_autoscaling_group" "ecs" {
   vpc_zone_identifier   = aws_subnet.app[*].id
   protect_from_scale_in = true # exigido pela managed termination protection
   force_delete          = true # permite destroy com instâncias protegidas
+  health_check_type     = "EC2"
+  enabled_metrics = [
+    "GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances",
+    "GroupPendingInstances", "GroupTerminatingInstances", "GroupTotalInstances",
+  ]
 
   launch_template {
     id      = aws_launch_template.ecs.id

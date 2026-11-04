@@ -19,7 +19,9 @@ locals {
   }
   lb = { LoadBalancer = aws_lb.main.arn_suffix }
   db = { DBInstanceIdentifier = aws_db_instance.db.identifier }
-  alarmes = {
+  asg     = { AutoScalingGroupName = aws_autoscaling_group.ecs.name }
+  cluster = { ClusterName = local.cluster }
+  alarmes_base = {
     dlq-com-mensagens        = { desc = "Mensagens na DLQ de pedidos", ns = "AWS/SQS", m = "ApproximateNumberOfMessagesVisible", dim = jsonencode({ QueueName = aws_sqs_queue.dlq.name }), stat = "Maximum", op = "GreaterThanThreshold", lim = 0, n = 1, per = 60, falta = "notBreaching" }
     fila-atrasada            = { desc = "Mensagem mais antiga da fila com mais de 5 min", ns = "AWS/SQS", m = "ApproximateAgeOfOldestMessage", dim = jsonencode({ QueueName = aws_sqs_queue.orders.name }), stat = "Maximum", op = "GreaterThanThreshold", lim = 300, n = 2, per = 60, falta = "notBreaching" }
     alb-5xx                  = { desc = "Mais de 5 respostas 5xx do chat em 5 min", ns = "AWS/ApplicationELB", m = "HTTPCode_Target_5XX_Count", dim = jsonencode(local.lb), stat = "Sum", op = "GreaterThanThreshold", lim = 5, n = 1, per = 300, falta = "notBreaching" }
@@ -29,7 +31,20 @@ locals {
     commerce-indisponivel    = { desc = "chat-api nao conseguiu falar com o commerce-api", ns = local.ns, m = "CommerceUnavailable", dim = "{}", stat = "Sum", op = "GreaterThanOrEqualToThreshold", lim = 1, n = 1, per = 300, falta = "notBreaching" }
     rds-cpu                  = { desc = "CPU do RDS acima de 80% por 15 min", ns = "AWS/RDS", m = "CPUUtilization", dim = jsonencode(local.db), stat = "Average", op = "GreaterThanThreshold", lim = 80, n = 3, per = 300, falta = "missing" }
     rds-disco                = { desc = "Menos de 2 GB livres no RDS", ns = "AWS/RDS", m = "FreeStorageSpace", dim = jsonencode(local.db), stat = "Minimum", op = "LessThanThreshold", lim = 2147483648, n = 1, per = 300, falta = "missing" }
+    # Capacidade do cluster e do Auto Scaling Group
+    cluster-cpu-reservada     = { desc = "Mais de 90% da CPU do cluster reservada por 15 min", ns = "AWS/ECS", m = "CPUReservation", dim = jsonencode(local.cluster), stat = "Average", op = "GreaterThanThreshold", lim = 90, n = 3, per = 300, falta = "notBreaching" }
+    cluster-memoria-reservada = { desc = "Mais de 90% da memoria do cluster reservada por 15 min", ns = "AWS/ECS", m = "MemoryReservation", dim = jsonencode(local.cluster), stat = "Average", op = "GreaterThanThreshold", lim = 90, n = 3, per = 300, falta = "notBreaching" }
+    capacidade-insuficiente   = { desc = "Tasks esperando instancia (CapacityProviderReservation > 100%) por 15 min", ns = "AWS/ECS/ManagedScaling", m = "CapacityProviderReservation", dim = jsonencode(merge(local.cluster, { CapacityProviderName = aws_ecs_capacity_provider.cp.name })), stat = "Average", op = "GreaterThanThreshold", lim = 100, n = 3, per = 300, falta = "notBreaching" }
+    asg-abaixo-do-minimo      = { desc = "Instancias em servico abaixo do minimo do ASG por 5 min", ns = "AWS/AutoScaling", m = "GroupInServiceInstances", dim = jsonencode(local.asg), stat = "Minimum", op = "LessThanThreshold", lim = var.asg_min, n = 5, per = 60, falta = "notBreaching" }
+    asg-no-maximo             = { desc = "ASG no tamanho maximo por 15 min (sem folga para escalar)", ns = "AWS/AutoScaling", m = "GroupInServiceInstances", dim = jsonencode(local.asg), stat = "Minimum", op = "GreaterThanOrEqualToThreshold", lim = var.asg_max, n = 3, per = 300, falta = "notBreaching" }
   }
+  # Saúde das tasks: tasks em execução abaixo do mínimo do auto scaling de cada serviço (Container Insights).
+  alarmes_tasks = { for s, v in var.services : "${s}-tasks-abaixo-do-minimo" => {
+    desc = "${s} com menos de ${v.min} task(s) em execucao por 3 min", ns = "ECS/ContainerInsights", m = "RunningTaskCount"
+    dim  = jsonencode(merge(local.cluster, { ServiceName = s })), stat = "Minimum", op = "LessThanThreshold", lim = v.min
+    n    = 3, per = 60, falta = "notBreaching"
+  } }
+  alarmes = merge(local.alarmes_base, local.alarmes_tasks)
 }
 
 resource "aws_cloudwatch_log_metric_filter" "mf" {
@@ -95,6 +110,9 @@ locals {
     ["LLM: latencia (ms)", 16, 14, "p50", 300, [[local.ns, "LLMLatency", { stat = "p50" }], ["...", { stat = "p90" }], [local.ns, "OrderProcessingTime", { stat = "p90", label = "worker p90" }]]],
     ["LLM: tokens", 0, 20, "Sum", 300, [[local.ns, "LLMInputTokens"], [".", "LLMOutputTokens"]]],
     ["RDS", 8, 20, "Average", 60, [["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", aws_db_instance.db.identifier], [".", "DatabaseConnections", ".", "."]]],
+    ["Instancias do ASG", 0, 26, "Maximum", 60, [["AWS/AutoScaling", "GroupInServiceInstances", "AutoScalingGroupName", aws_autoscaling_group.ecs.name], [".", "GroupDesiredCapacity", ".", "."], [".", "GroupPendingInstances", ".", "."], [".", "GroupTerminatingInstances", ".", "."], [".", "GroupMaxSize", ".", "."]]],
+    ["Reserva do cluster (%)", 8, 26, "Average", 60, [["AWS/ECS", "CPUReservation", "ClusterName", local.cluster], [".", "MemoryReservation", ".", "."], ["AWS/ECS/ManagedScaling", "CapacityProviderReservation", "CapacityProviderName", aws_ecs_capacity_provider.cp.name, "ClusterName", local.cluster]]],
+    ["Tasks em execucao", 16, 26, "Maximum", 60, [for s in keys(var.services) : ["ECS/ContainerInsights", "RunningTaskCount", "ClusterName", local.cluster, "ServiceName", s]]],
   ]
 }
 

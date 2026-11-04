@@ -46,6 +46,12 @@ variable "db_master_user" {
   default = "pgadmin"
 }
 
+variable "db_password_version" {
+  description = "Incremente para gerar e gravar novas senhas dos usuários de serviço"
+  type        = number
+  default     = 1
+}
+
 variable "deploy_app" {
   description = "Fase 2: cria task definitions, roda a migração e sobe os serviços. Deixe false até as imagens estarem no ECR."
   type        = bool

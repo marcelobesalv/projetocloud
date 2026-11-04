@@ -113,7 +113,7 @@ resource "aws_ecs_task_definition" "migrate" {
 # Roda a migração a cada nova revisão da task definition (= nova imagem), antes dos serviços.
 resource "terraform_data" "migrate" {
   count            = var.deploy_app ? 1 : 0
-  triggers_replace = [aws_ecs_task_definition.migrate[0].arn]
+  triggers_replace = [aws_ecs_task_definition.migrate[0].arn, var.db_password_version]
   provisioner "local-exec" {
     command = "${path.module}/scripts/run-migrate.sh ${var.region} ${aws_ecs_cluster.main.name} ${aws_ecs_task_definition.migrate[0].arn} ${aws_ecs_capacity_provider.cp.name}"
   }
@@ -135,6 +135,8 @@ resource "aws_ecs_service" "svc" {
   desired_count                      = each.value.desired
   enable_ecs_managed_tags            = true
   propagate_tags                     = "SERVICE"
+  force_new_deployment               = true
+  triggers                           = { senhas = var.db_password_version } # novas senhas → novas tasks
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
 
@@ -197,6 +199,8 @@ resource "aws_ecs_service" "chat" {
   enable_ecs_managed_tags            = true
   propagate_tags                     = "SERVICE"
   health_check_grace_period_seconds  = 60
+  force_new_deployment               = true
+  triggers                           = { senhas = var.db_password_version }
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
 
