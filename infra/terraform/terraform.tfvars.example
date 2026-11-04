@@ -1,0 +1,6 @@
+# Copie para terraform.tfvars e ajuste.
+region       = "sa-east-1"
+llm_model_id = "global.anthropic.claude-haiku-5-5"
+# alarm_email = "voce@exemplo.com"
+# deploy_app  = true
+# image_tag   = "37791f6"

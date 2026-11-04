@@ -31,11 +31,34 @@ db/                          Alembic (migrations/), seed (seed/), bootstrap.py (
 services/chat-api/           FastAPI, loop de tool use, BedrockProvider/FakeProvider, página HTML
 services/commerce-api/       catálogo, compatibilidade, kit, pedidos idempotentes, outbox
 services/order-worker/       consumidor SQS, reserva de estoque, /health
+infra/terraform/             etapa automatizada: São Paulo (sa-east-1) com Terraform, state no S3 (ver o README de lá)
+docs/etapa-manual-ohio/      etapa manual: scripts da AWS CLI usados em Ohio (us-east-2), na ordem
+ops/                         operação e testes: status, carga, demo, perda de instância, drenagem, pausar/retomar
 ```
 
 Cada serviço tem `Dockerfile` multi-stage: `runtime` (imagem final, python:3.12-slim, usuário não-root
 10001, sem deps de dev) e `test` (pytest). Os serviços são autocontidos — cada build context é a pasta
 do serviço.
+
+## Na AWS: estado e como continuar
+
+| Etapa | Região | Como foi feita | Endereço |
+|---|---|---|---|
+| Manual | Ohio (us-east-2) | `docs/etapa-manual-ohio/` (AWS CLI no CloudShell) | `http://setup-pronto-alb-562905076.us-east-2.elb.amazonaws.com/` |
+| Terraform | São Paulo (sa-east-1) | `infra/terraform/` (state no S3) | `http://setup-pronto-alb-1512532875.sa-east-1.elb.amazonaws.com/` |
+
+Os dois ambientes ficam **pausados** fora das sessões de trabalho, porque custam por hora. Para religar:
+- São Paulo: `terraform apply` com a tag publicada (ver `infra/terraform/README.md`).
+- Ohio: `ops/retomar.sh us-east-2`.
+
+Para pausar de novo: `ops/pausar.sh us-east-2 sa-east-1`.
+
+Para trabalhar na AWS, cada pessoa precisa:
+- de um usuário no IAM Identity Center da conta `202757356229`, com o permission set `AdministratorAccess`;
+- do CloudShell da região, ou da AWS CLI com `aws sso login`.
+
+Não há senha nem chave para repassar: os segredos ficam no Secrets Manager, e o state do Terraform fica no bucket
+`setup-pronto-tfstate-202757356229-sa-east-1`. Imagens novas são publicadas com `./push.sh <regiao> <conta>`; a tag é o commit curto.
 
 ## Subindo localmente
 
