@@ -19,8 +19,8 @@ Os scripts 1 a 3 exportam só `AWS_DEFAULT_REGION`. Rode-os no CloudShell **de O
 `AWS_REGION`, que tem precedência. A tag padrão do `s4-tasks.sh` é `37791f6`; para outra, use `TAG=<tag> bash s4-tasks.sh`.
 
 ## Estado atual
-- Imagem em uso: `37791f6`. A `82b38f5` (com o botão "Tentar de novo") já está no ECR de Ohio; para trocar, rode
-  `TAG=82b38f5 bash s4-tasks.sh` (novas revisões e migração) e um `aws ecs update-service --force-new-deployment` em cada serviço.
+- Imagem em uso: `37791f6`. A `c44c936` (com o botão "Tentar de novo") já está no ECR de Ohio; para trocar, rode
+  `TAG=c44c936 bash s4-tasks.sh` (novas revisões e migração) e um `aws ecs update-service --force-new-deployment` em cada serviço.
 - Pausado: tasks em 0, ASG com mínimo 0, RDS parado. Para religar: `ops/retomar.sh us-east-2`. Para pausar: `ops/pausar.sh us-east-2`.
   Pausado, ainda cobram o NAT e o ALB. O RDS parado religa sozinho depois de 7 dias.
 - Alarmes que disparam com o ambiente pausado (`asg-abaixo-do-minimo`, `*-tasks-abaixo-do-minimo`) são esperados.

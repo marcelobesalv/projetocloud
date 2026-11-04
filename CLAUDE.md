@@ -91,7 +91,8 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
   validado com roteiro completo, teste de carga (2→6 tasks, 3→4 instâncias, 0 erros) e testes de falha (DLQ, commerce fora).
 - **São Paulo (sa-east-1)**: `infra/terraform` (ver o README de lá), em duas fases (`deploy_app`), state no S3
   (`setup-pronto-tfstate-202757356229-sa-east-1`, criado por `bootstrap/`). Recriado do zero em 04/11 (destroy de 115
-  recursos + apply) e rodando a imagem `82b38f5`, publicada do código com `push.ps1`. Cópia de trabalho do Terraform em
+  recursos + apply) e rodando as imagens do commit `c44c936` (publicadas do código com `push.ps1`; no ECR têm também a
+  tag antiga `82b38f5`, de antes da reescrita do histórico, que as task definitions atuais ainda usam). Cópia de trabalho do Terraform em
   `~/tf` e scripts em `~/ops` no CloudShell de sa-east-1 (`TF_DATA_DIR=/tmp/tfdata`, Terraform 1.11.4 em `~/bin`).
 - Testes em São Paulo (04/11): perda abrupta da instância mais carregada → ASG repõe em ~1 min, ~1% de 502 por ~10 s;
   drenagem planejada sem erros. Resultados no doc "Setup Pronto — roteiro da apresentação".
@@ -108,5 +109,6 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 - Sem autenticação nem rate limiting no `POST /chat`; o histórico em `conversas.mensagens` cresce sem limite.
 - Sem job de reconciliação para pedidos PENDENTE antigos e sem ferramenta para reprocessar mensagens da DLQ.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
-- Ohio ainda roda `37791f6`: atualizar as task definitions para `82b38f5` (já está no ECR de Ohio).
+- Ohio ainda roda `37791f6`: atualizar as task definitions para `c44c936` (já está no ECR de Ohio).
+- No próximo deploy em São Paulo, usar `-var image_tag=c44c936`; depois a tag `82b38f5` pode ser apagada dos dois ECRs.
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.
