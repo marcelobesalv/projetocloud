@@ -5,7 +5,9 @@
 # Uso: ops/drenar-instancia.sh [regiao] [--remover]
 set -euo pipefail
 source "$(dirname "$0")/comum.sh" "${1:-}"
-CI=$(aws ecs list-container-instances --cluster $C --query 'containerInstanceArns[0]' --output text)
+# a instância com mais tasks (o teste mais exigente)
+CI=$(aws ecs describe-container-instances --cluster $C --container-instances $(aws ecs list-container-instances --cluster $C --query containerInstanceArns --output text) \
+  --query 'reverse(sort_by(containerInstances,&runningTasksCount))[0].containerInstanceArn' --output text)
 EC2=$(aws ecs describe-container-instances --cluster $C --container-instances $CI --query 'containerInstances[0].ec2InstanceId' --output text)
 echo "== $(date -u +%T) drenando $EC2"
 aws ecs update-container-instances-state --cluster $C --container-instances $CI --status DRAINING --query 'containerInstances[0].status' --output text

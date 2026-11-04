@@ -4,7 +4,9 @@
 # Uso: ops/teste-instancia.sh [regiao]
 set -euo pipefail
 source "$(dirname "$0")/comum.sh" "${1:-}"
-CI=$(aws ecs list-container-instances --cluster $C --query 'containerInstanceArns[0]' --output text)
+# a instância com mais tasks (o teste mais exigente)
+CI=$(aws ecs describe-container-instances --cluster $C --container-instances $(aws ecs list-container-instances --cluster $C --query containerInstanceArns --output text) \
+  --query 'reverse(sort_by(containerInstances,&runningTasksCount))[0].containerInstanceArn' --output text)
 EC2=$(aws ecs describe-container-instances --cluster $C --container-instances $CI --query 'containerInstances[0].ec2InstanceId' --output text)
 echo "tasks na instância $EC2:"
 aws ecs list-tasks --cluster $C --container-instance $CI --query 'taskArns' --output text | tr '\t' '\n' | sed 's/.*\//  /'

@@ -17,10 +17,10 @@ resource "aws_lb_target_group" "chat" {
   health_check {
     path                = "/health"
     matcher             = "200"
-    interval            = 15
-    timeout             = 5
+    interval            = 5 # instância perdida sai do balanceamento em ~10 s (era 45 s com 15 s × 3)
+    timeout             = 4
     healthy_threshold   = 2
-    unhealthy_threshold = 3
+    unhealthy_threshold = 2
   }
 }
 
