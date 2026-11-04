@@ -89,10 +89,13 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 ## Estado da implantação (nov/2026)
 - **Ohio (us-east-2)**: montado à mão via CloudShell (scripts `s1`–`s6` no home do CloudShell de Ohio), imagem `37791f6`,
   validado com roteiro completo, teste de carga (2→6 tasks, 3→4 instâncias, 0 erros) e testes de falha (DLQ, commerce fora).
-- **São Paulo (sa-east-1)**: `infra/terraform` (ver o README de lá), em duas fases (`deploy_app`). Roteiro completo
-  validado com a imagem `37791f6` (copiada de Ohio). O código já usa backend S3 (`bootstrap/` + `envs/`), Terraform >= 1.11
-  e senhas write-only, mas o state ainda está local em `~/tf` no CloudShell de sa-east-1: falta o bootstrap do bucket,
-  `terraform init -migrate-state` e um `destroy` + `apply` do zero com a nova imagem.
+- **São Paulo (sa-east-1)**: `infra/terraform` (ver o README de lá), em duas fases (`deploy_app`), state no S3
+  (`setup-pronto-tfstate-202757356229-sa-east-1`, criado por `bootstrap/`). Recriado do zero em 04/11 (destroy de 115
+  recursos + apply) e rodando a imagem `82b38f5`, publicada do código com `push.ps1`. Cópia de trabalho do Terraform em
+  `~/tf` e scripts em `~/ops` no CloudShell de sa-east-1 (`TF_DATA_DIR=/tmp/tfdata`, Terraform 1.11.4 em `~/bin`).
+- Testes em São Paulo (04/11): perda abrupta da instância mais carregada → ASG repõe em ~1 min, ~1% de 502 por ~10 s;
+  drenagem planejada sem erros. Resultados no doc "Setup Pronto — roteiro da apresentação".
+- No CloudShell, `AWS_REGION` vem definido e tem precedência sobre `AWS_DEFAULT_REGION`: scripts exportam os dois.
 - Os dois ambientes ficam pausados fora das sessões (`ops/pausar.sh`); `ops/retomar.sh` ou `terraform apply` religam.
 - Operação e testes: `ops/` (status, carga, demo, perda de instância, drenagem, alarmes extras de Ohio).
 - Service Connect: o cliente (chat-api) só enxerga os aliases que já existiam quando a task subiu — por isso o
@@ -105,5 +108,5 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 - Sem autenticação nem rate limiting no `POST /chat`; o histórico em `conversas.mensagens` cresce sem limite.
 - Sem job de reconciliação para pedidos PENDENTE antigos e sem ferramenta para reprocessar mensagens da DLQ.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
-- Publicar a imagem nova (botão "Tentar de novo") nos dois ECRs com `push.sh`, a partir do código.
-- Rodar `ops/ohio-alarmes-extra.sh` em Ohio (alarmes de tasks, cluster e ASG da etapa manual).
+- Ohio ainda roda `37791f6`: atualizar as task definitions para `82b38f5` (já está no ECR de Ohio).
+- Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.
