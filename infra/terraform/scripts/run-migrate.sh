@@ -3,7 +3,7 @@
 # Uso: run-migrate.sh <regiao> <cluster> <task-definition-arn> <capacity-provider>
 set -euo pipefail
 REGION=$1 CLUSTER=$2 TD=$3 CP=$4
-export AWS_DEFAULT_REGION=$REGION
+export AWS_REGION=$REGION AWS_DEFAULT_REGION=$REGION
 
 for i in $(seq 30); do   # espera alguma instância registrar no cluster (primeiro apply)
   n=$(aws ecs describe-clusters --clusters "$CLUSTER" --query 'clusters[0].registeredContainerInstancesCount' --output text)

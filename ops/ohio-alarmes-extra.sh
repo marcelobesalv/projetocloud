@@ -2,7 +2,7 @@
 # Etapa manual (Ohio): o que o Terraform já cria em São Paulo — Container Insights, métricas do ASG e os alarmes
 # de saúde das tasks, reserva do cluster e capacidade do ASG. Idempotente.  Uso: ops/ohio-alarmes-extra.sh
 set -euo pipefail
-export AWS_DEFAULT_REGION=us-east-2
+export AWS_REGION=us-east-2 AWS_DEFAULT_REGION=us-east-2 # o CloudShell define AWS_REGION, que tem precedência
 P=setup-pronto C=setup-pronto-cluster ASG=setup-pronto-ecs-asg
 TOPIC=$(aws sns create-topic --name $P-alertas --query TopicArn --output text)
 aws ecs update-cluster-settings --cluster $C --settings name=containerInsights,value=enabled --query 'cluster.settings' --output text

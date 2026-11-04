@@ -2,7 +2,7 @@
 # Religa um ambiente pausado com ops/pausar.sh (em São Paulo, um "terraform apply" também restaura tudo).
 # Uso: ops/retomar.sh <regiao>
 set -uo pipefail
-export AWS_DEFAULT_REGION=$1; C=setup-pronto-cluster
+export AWS_REGION=$1 AWS_DEFAULT_REGION=$1; C=setup-pronto-cluster
 aws rds start-db-instance --db-instance-identifier setup-pronto-db --query DBInstance.DBInstanceStatus --output text
 aws autoscaling update-auto-scaling-group --auto-scaling-group-name setup-pronto-ecs-asg --min-size 2 --desired-capacity 2 && echo ASG_2
 aws rds wait db-instance-available --db-instance-identifier setup-pronto-db && echo RDS_OK

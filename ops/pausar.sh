@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Desliga o que custa por hora (tasks, instâncias, RDS). NAT e ALB continuam.  Uso: ops/pausar.sh <regiao>...
 for R in "$@"; do
-  export AWS_DEFAULT_REGION=$R; echo "== $R"
+  export AWS_REGION=$R AWS_DEFAULT_REGION=$R; echo "== $R"
   for s in chat-api commerce-api order-worker; do
     aws application-autoscaling register-scalable-target --service-namespace ecs --scalable-dimension ecs:service:DesiredCount \
       --resource-id service/setup-pronto-cluster/$s --min-capacity 0 --max-capacity 0 >/dev/null
