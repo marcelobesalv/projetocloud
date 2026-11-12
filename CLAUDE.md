@@ -113,6 +113,9 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 - Sem autenticação nem rate limiting no `POST /chat`; o histórico em `conversas.mensagens` cresce sem limite.
 - Reconciliação e `ops/dlq.sh` ainda não foram implantados na AWS: precisam de imagem nova (`push`), da migração
   0002 e, em Ohio, de rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
+  Passo a passo para São Paulo, junto com a carga em degraus e o relatório: `docs/roteiro-sao-paulo.md`
+  (`ops/carga.py --degraus ... --csv`, `ops/metricas.py --carga`, `ops/teste-reconciliacao.sh`). Resultados vão em
+  `docs/resultados/`.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
 - Ohio ainda roda `37791f6`: atualizar as task definitions para `82b38f5` (já está no ECR de Ohio).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.

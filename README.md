@@ -33,7 +33,9 @@ services/commerce-api/       catálogo, compatibilidade, kit, pedidos idempotent
 services/order-worker/       consumidor SQS, reserva de estoque, /health
 infra/terraform/             etapa automatizada: São Paulo (sa-east-1) com Terraform, state no S3 (ver o README de lá)
 docs/etapa-manual-ohio/      etapa manual: scripts da AWS CLI usados em Ohio (us-east-2), na ordem
-ops/                         operação e testes: status, carga, demo, perda de instância, drenagem, DLQ, pausar/retomar
+ops/                         operação e testes: status, carga em degraus, relatório do CloudWatch, demo, perda de
+                             instância, drenagem, DLQ, teste da reconciliação, pausar/retomar
+docs/roteiro-sao-paulo.md    passo a passo: deploy da versão nova, carga em degraus e relatório em sa-east-1
 ```
 
 Cada serviço tem `Dockerfile` multi-stage: `runtime` (imagem final, python:3.12-slim, usuário não-root
