@@ -16,6 +16,7 @@ Alvo padrão: **São Paulo (sa-east-1)**, com o Bedrock pelo perfil `global.anth
 | `alb.tf` | ALB (idle 60 s), target group `/health`, listener 80 |
 | `app.tf` | **fase 2**: task definitions, migração (`scripts/run-migrate.sh`), 3 serviços, auto scaling |
 | `observability.tf` | 15 metric filters, alarmes → SNS (fila, DLQ, pedidos travados, ALB, LLM, RDS, tasks abaixo do mínimo, reserva do cluster, capacidade do ASG), dashboard |
+| `audit.tf` | CloudTrail multirregião (S3 privado com validação de integridade + CloudWatch Logs), 6 métricas e 5 alarmes de segurança (padrões CIS), 7 consultas salvas do Logs Insights; o que fazer em cada alarme: `docs/runbook.md` |
 | `backend.tf`, `envs/`, `bootstrap/` | state remoto no S3 e valores por região |
 
 ## Como aplicar (CloudShell de sa-east-1)

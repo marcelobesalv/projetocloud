@@ -116,6 +116,7 @@ locals {
     ["Instancias do ASG", 0, 26, "Maximum", 60, [["AWS/AutoScaling", "GroupInServiceInstances", "AutoScalingGroupName", aws_autoscaling_group.ecs.name], [".", "GroupDesiredCapacity", ".", "."], [".", "GroupPendingInstances", ".", "."], [".", "GroupTerminatingInstances", ".", "."], [".", "GroupMaxSize", ".", "."]]],
     ["Reserva do cluster (%)", 8, 26, "Average", 60, [["AWS/ECS", "CPUReservation", "ClusterName", local.cluster], [".", "MemoryReservation", ".", "."], ["AWS/ECS/ManagedScaling", "CapacityProviderReservation", "CapacityProviderName", aws_ecs_capacity_provider.cp.name, "ClusterName", local.cluster]]],
     ["Tasks em execucao", 16, 26, "Maximum", 60, [for s in keys(var.services) : ["ECS/ContainerInsights", "RunningTaskCount", "ClusterName", local.cluster, "ServiceName", s]]],
+    ["Seguranca (CloudTrail)", 0, 32, "Sum", 300, [for m in keys(local.filtros_seguranca) : ["${local.ns}/Seguranca", m]]],
   ]
 }
 
@@ -128,7 +129,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         type       = "metric", x = g[1], y = g[2], width = 8, height = 6
         properties = { title = g[0], region = var.region, stat = g[3], period = g[4], view = "timeSeries", metrics = g[5] }
       }))],
-      [{ type = "alarm", x = 16, y = 20, width = 8, height = 6, properties = { title = "Alarmes", alarms = [for a in aws_cloudwatch_metric_alarm.a : a.arn] } }],
+      [{ type = "alarm", x = 16, y = 20, width = 8, height = 6, properties = { title = "Alarmes", alarms = concat([for a in aws_cloudwatch_metric_alarm.a : a.arn], [for a in aws_cloudwatch_metric_alarm.seguranca : a.arn]) } }],
     )
   })
 }

@@ -125,7 +125,11 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 - Sem autenticação nem rate limiting no `POST /chat`; o histórico em `conversas.mensagens` cresce sem limite.
 - Ohio ainda roda `37791f6`, sem a reconciliação: para atualizar, publicar `bc328c5` no ECR de Ohio, `TAG=... s4-tasks.sh`
   e rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
-- Plano até a entrega (20/11): CloudTrail + runbook de incidentes; WAF com rate limit no ALB; HTTPS via CloudFront;
+- Auditoria: `infra/terraform/audit.tf` (CloudTrail multirregião criado pelo Terraform de SP — não criar outro em Ohio,
+  alarmes `seg-*`, consultas salvas) e `docs/runbook.md`. Alarme novo → acrescentar a seção correspondente no runbook.
+  Aplicado em SP em 12/11 com `-target` (ambiente pausado): o **dashboard** ainda não tem o gráfico de segurança nem os
+  alarmes `seg-*` — entra no próximo `terraform apply` completo (que também religa o ambiente).
+- Plano até a entrega (20/11): WAF com rate limit no ALB; HTTPS via CloudFront;
   prompt aceitar "Fechado! Pode fazer o pedido"; limitar `conversas.mensagens`; diagrama; destroy + apply do zero.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.
