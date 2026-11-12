@@ -33,7 +33,7 @@ services/commerce-api/       catálogo, compatibilidade, kit, pedidos idempotent
 services/order-worker/       consumidor SQS, reserva de estoque, /health
 infra/terraform/             etapa automatizada: São Paulo (sa-east-1) com Terraform, state no S3 (ver o README de lá)
 docs/etapa-manual-ohio/      etapa manual: scripts da AWS CLI usados em Ohio (us-east-2), na ordem
-ops/                         operação e testes: status, carga, demo, perda de instância, drenagem, pausar/retomar
+ops/                         operação e testes: status, carga, demo, perda de instância, drenagem, DLQ, pausar/retomar
 ```
 
 Cada serviço tem `Dockerfile` multi-stage: `runtime` (imagem final, python:3.12-slim, usuário não-root
@@ -125,7 +125,7 @@ TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/po
 
 | Serviço | O que os testes cobrem |
 |---|---|
-| commerce-api (23) | idempotência do POST /orders (repetição, chave com outro conteúdo → 409, 8 requisições concorrentes → 1 pedido), preço recalculado no servidor, compatibilidade (conexão, adaptador/hub, SO, layout, Hz por porta, VESA/tamanho do suporte), desconto progressivo limitado por produto, outbox com fila fora do ar |
+| commerce-api (27) | idempotência do POST /orders (repetição, chave com outro conteúdo → 409, 8 requisições concorrentes → 1 pedido), preço recalculado no servidor, compatibilidade (conexão, adaptador/hub, SO, layout, Hz por porta, VESA/tamanho do suporte), desconto progressivo limitado por produto, outbox com fila fora do ar, reconciliação (pedido parado é reenviado uma vez por janela, recente/já processado não, travado para após N reenvios, uma task por vez) |
 | order-worker (8) | confirmação, estoque insuficiente em um item → REJEITADO sem reservar nada, reentrega da mesma mensagem só apaga, entregas duplicadas simultâneas, dois pedidos pela última unidade, erro transitório não apaga, mensagem inválida fica para a DLQ |
 | chat-api (9) | tool use com dados do commerce, correlation_id propagado, commerce fora do ar → resposta fixa e turno não gravado, LLM fora, limite de iterações, janela de histórico, idempotency key estável, BedrockProvider (inference profile, toolConfig, erro → LLMError) |
 
@@ -133,7 +133,7 @@ TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/po
 
 | Item | Status |
 |---|---|
-| Testes automatizados nos containers (commerce 23, worker 8, chat 9) | ✅ passando |
+| Testes automatizados nos containers (commerce 27, worker 8, chat 9) | ✅ passando |
 | `docker compose up --build` no modo fake: build das 4 imagens, job `migrate`, ElasticMQ e health checks | ✅ testado |
 | Roteiro de demonstração completo no modo fake (kit de R$ 889,64 → R$ 986,40, pedido CONFIRMADO pelo worker) | ✅ testado |
 | Modo Bedrock (`docker-compose.bedrock.yml`) com o Claude Haiku 5.5 real | ✅ testado |
@@ -204,6 +204,10 @@ Em todos os serviços: `PORT` (padrão 8080), `LOG_LEVEL` (INFO), `DB_HOST`, `DB
 | `OUTBOX_BATCH_SIZE` | 10 | eventos por `SendMessageBatch` (máx. 10) |
 | `KIT_DISCOUNT_TIERS` | 2:5,3:8,4:10,5:12 | `produtos_diferentes:desconto%` |
 | `MAX_QTD_POR_ITEM` | 10 | limite de unidades por item |
+| `RECONCILIACAO_ENABLED` | true | liga a reconciliação de pedidos PENDENTE parados (só roda com o publicador ligado) |
+| `RECONCILIACAO_INTERVALO_SECONDS` | 60 | intervalo entre ciclos |
+| `RECONCILIACAO_IDADE_SECONDS` | 600 | idade mínima do pedido e da última publicação para reenviar |
+| `RECONCILIACAO_MAX_REENVIOS` | 3 | depois disso o pedido conta como travado (métrica `OrdersStuck`, alarme) |
 
 ### order-worker
 
@@ -254,6 +258,16 @@ novas e **nunca sobrescreve o estoque** de variantes existentes.
   e responde que não conseguiu consultar, em vez de ser reiniciado em cascata.
 - **Mensagens inválidas** (JSON quebrado, pedido inexistente) não são apagadas: após 5 recebimentos vão
   para a DLQ para investigação. Erros transitórios também não apagam (voltam pela visibility timeout).
+- **Reconciliação de pedidos parados.** Se o evento de um pedido se perde depois de publicado (foi para a DLQ
+  porque o banco ficou fora mais que 5 × visibility timeout, fila purgada…), o pedido ficaria PENDENTE para sempre.
+  Um job no commerce-api (`app/reconciliacao.py`, a cada 60 s, uma task por vez via advisory lock) regrava o
+  evento no outbox para pedidos PENDENTE cujo último evento foi publicado há mais de 10 min. O worker é idempotente,
+  então reenviar à toa não tem efeito. Após 3 reenvios o pedido conta como travado (`OrdersStuck`, alarme
+  `pedidos-travados`) e não é mais reenviado. Demonstração local: suba com `RECONCILIACAO_INTERVALO_SECONDS=5
+  RECONCILIACAO_IDADE_SECONDS=20`, pare o order-worker, faça um pedido, purgue a fila `orders` e religue o worker:
+  em ~20 s o pedido é CONFIRMADO, com o mesmo `correlation_id`.
+- **DLQ**: `ops/dlq.sh <regiao> ver` mostra as mensagens sem tirá-las da DLQ; `ops/dlq.sh <regiao> reprocessar`
+  devolve todas para a fila (redrive nativo do SQS) depois de corrigida a causa.
 
 ## Notas para o ECS
 

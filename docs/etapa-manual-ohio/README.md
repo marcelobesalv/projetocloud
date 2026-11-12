@@ -12,7 +12,7 @@ no home do CloudShell de Ohio, e os scripts seguintes leem de lá.
 | — | `../../push.sh us-east-2 <conta>` | Imagens no ECR (na máquina de build) |
 | 4 | `s4-tasks.sh` | Task definitions (rede bridge, porta dinâmica) e o job de migração (`run-task`), conferindo o exitCode |
 | 5 | `s5-servicos.sh` | Namespace do Service Connect, ALB + target group + listener, os 3 serviços |
-| 6 | `s6-obs.py` | Auto scaling das tasks, 13 metric filters, alarmes, SNS, dashboard |
+| 6 | `s6-obs.py` | Auto scaling das tasks, 15 metric filters, alarmes, SNS, dashboard |
 | 7 | `../../ops/ohio-alarmes-extra.sh` | Container Insights, métricas do ASG e alarmes de tasks, reserva do cluster e capacidade |
 
 Os scripts 1 a 3 exportam só `AWS_DEFAULT_REGION`. Rode-os no CloudShell **de Ohio**: o CloudShell define

@@ -18,6 +18,17 @@ al cluster-memoria-reservada "Mais de 90% da memoria do cluster reservada por 15
 al capacidade-insuficiente "Tasks esperando instancia por 15 min" AWS/ECS/ManagedScaling CapacityProviderReservation Average GreaterThanThreshold 100 3 300 Name=CapacityProviderName,Value=$P-cp Name=ClusterName,Value=$C
 al asg-abaixo-do-minimo "Instancias em servico abaixo do minimo por 5 min" AWS/AutoScaling GroupInServiceInstances Minimum LessThanThreshold 2 5 60 Name=AutoScalingGroupName,Value=$ASG
 al asg-no-maximo "ASG no tamanho maximo por 15 min" AWS/AutoScaling GroupInServiceInstances Minimum GreaterThanOrEqualToThreshold 4 3 300 Name=AutoScalingGroupName,Value=$ASG
+# Reconciliação de pedidos PENDENTE (commerce-api): reenvios e pedidos travados
+LG=/ecs/$P/commerce-api
+aws logs put-metric-filter --log-group-name $LG --filter-name OrdersRequeued --filter-pattern '{ $.event = "order_requeued" }' \
+  --metric-transformations metricName=OrdersRequeued,metricNamespace=SetupPronto,metricValue=1,defaultValue=0,unit=Count
+aws logs put-metric-filter --log-group-name $LG --filter-name OrdersStuck --filter-pattern '{ $.event = "reconciliation_cycle" }' \
+  --metric-transformations 'metricName=OrdersStuck,metricNamespace=SetupPronto,metricValue=$.travados,unit=Count'
+aws cloudwatch put-metric-alarm --alarm-name $P-pedidos-travados \
+  --alarm-description "Pedidos PENDENTE que nao se resolveram nem com os reenvios da reconciliacao" \
+  --namespace SetupPronto --metric-name OrdersStuck --statistic Maximum --comparison-operator GreaterThanThreshold --threshold 0 \
+  --evaluation-periods 1 --period 300 --treat-missing-data notBreaching --alarm-actions "$TOPIC" --ok-actions "$TOPIC" \
+  && echo "alarme pedidos-travados"
 for s in chat-api:2 commerce-api:2 order-worker:1; do
   al "${s%%:*}-tasks-abaixo-do-minimo" "${s%%:*} com menos de ${s##*:} task(s) por 3 min" ECS/ContainerInsights RunningTaskCount Minimum LessThanThreshold "${s##*:}" 3 60 \
     Name=ClusterName,Value=$C Name=ServiceName,Value=${s%%:*}

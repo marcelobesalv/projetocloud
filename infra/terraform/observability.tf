@@ -12,6 +12,8 @@ locals {
     CommerceUnavailable = { grupo = "chat-api", padrao = "{ $.event = \"commerce_unavailable\" }", valor = "1", unidade = "Count" }
     OrdersCreated       = { grupo = "commerce-api", padrao = "{ $.event = \"order_created\" }", valor = "1", unidade = "Count" }
     OutboxPublishFailed = { grupo = "commerce-api", padrao = "{ $.event = \"outbox_publish_failed\" }", valor = "1", unidade = "Count" }
+    OrdersRequeued      = { grupo = "commerce-api", padrao = "{ $.event = \"order_requeued\" }", valor = "1", unidade = "Count" }
+    OrdersStuck         = { grupo = "commerce-api", padrao = "{ $.event = \"reconciliation_cycle\" }", valor = "$.travados", unidade = "Count" }
     OrdersConfirmed     = { grupo = "order-worker", padrao = "{ $.event = \"order_processed\" && $.resultado = \"CONFIRMADO\" }", valor = "1", unidade = "Count" }
     OrdersRejected      = { grupo = "order-worker", padrao = "{ $.event = \"order_processed\" && $.resultado = \"REJEITADO\" }", valor = "1", unidade = "Count" }
     OrderProcessingTime = { grupo = "order-worker", padrao = "{ $.event = \"order_processed\" }", valor = "$.duration_ms", unidade = "Milliseconds" }
@@ -28,6 +30,7 @@ locals {
     chat-sem-hosts-saudaveis = { desc = "Task do chat nao saudavel por 3 min", ns = "AWS/ApplicationELB", m = "UnHealthyHostCount", dim = jsonencode(merge(local.lb, { TargetGroup = aws_lb_target_group.chat.arn_suffix })), stat = "Maximum", op = "GreaterThanOrEqualToThreshold", lim = 1, n = 3, per = 60, falta = "notBreaching" }
     chat-latencia-p90        = { desc = "p90 do chat acima de 30 s", ns = "AWS/ApplicationELB", m = "TargetResponseTime", dim = jsonencode(local.lb), stat = "p90", op = "GreaterThanThreshold", lim = 30, n = 3, per = 60, falta = "notBreaching" }
     llm-erros                = { desc = "3 ou mais falhas do Bedrock em 5 min", ns = local.ns, m = "LLMErrors", dim = "{}", stat = "Sum", op = "GreaterThanOrEqualToThreshold", lim = 3, n = 1, per = 300, falta = "notBreaching" }
+    pedidos-travados         = { desc = "Pedidos PENDENTE que nao se resolveram nem com os reenvios da reconciliacao", ns = local.ns, m = "OrdersStuck", dim = "{}", stat = "Maximum", op = "GreaterThanThreshold", lim = 0, n = 1, per = 300, falta = "notBreaching" }
     commerce-indisponivel    = { desc = "chat-api nao conseguiu falar com o commerce-api", ns = local.ns, m = "CommerceUnavailable", dim = "{}", stat = "Sum", op = "GreaterThanOrEqualToThreshold", lim = 1, n = 1, per = 300, falta = "notBreaching" }
     rds-cpu                  = { desc = "CPU do RDS acima de 80% por 15 min", ns = "AWS/RDS", m = "CPUUtilization", dim = jsonencode(local.db), stat = "Average", op = "GreaterThanThreshold", lim = 80, n = 3, per = 300, falta = "missing" }
     rds-disco                = { desc = "Menos de 2 GB livres no RDS", ns = "AWS/RDS", m = "FreeStorageSpace", dim = jsonencode(local.db), stat = "Minimum", op = "LessThanThreshold", lim = 2147483648, n = 1, per = 300, falta = "missing" }
@@ -105,7 +108,7 @@ locals {
     ["CPU por servico (%)", 0, 8, "Average", 60, local.ecs_metric["CPUUtilization"]],
     ["Memoria por servico (%)", 8, 8, "Average", 60, local.ecs_metric["MemoryUtilization"]],
     ["Fila de pedidos", 16, 8, "Maximum", 60, [["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.orders.name], [".", "ApproximateNumberOfMessagesNotVisible", ".", "."], [".", "ApproximateNumberOfMessagesVisible", ".", aws_sqs_queue.dlq.name, { label = "DLQ" }]]],
-    ["Pedidos", 0, 14, "Sum", 300, [[local.ns, "OrdersCreated"], [".", "OrdersConfirmed"], [".", "OrdersRejected"], [".", "PoisonMessages"]]],
+    ["Pedidos", 0, 14, "Sum", 300, [[local.ns, "OrdersCreated"], [".", "OrdersConfirmed"], [".", "OrdersRejected"], [".", "PoisonMessages"], [".", "OrdersRequeued"], [".", "OrdersStuck", { stat = "Maximum" }]]],
     ["LLM: chamadas, erros, turnos", 8, 14, "Sum", 300, [[local.ns, "LLMCalls"], [".", "LLMErrors"], [".", "ChatTurns"], [".", "CommerceUnavailable"]]],
     ["LLM: latencia (ms)", 16, 14, "p50", 300, [[local.ns, "LLMLatency", { stat = "p50" }], ["...", { stat = "p90" }], [local.ns, "OrderProcessingTime", { stat = "p90", label = "worker p90" }]]],
     ["LLM: tokens", 0, 20, "Sum", 300, [[local.ns, "LLMInputTokens"], [".", "LLMOutputTokens"]]],

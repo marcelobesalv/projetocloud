@@ -16,6 +16,7 @@ from app.config import Settings
 from app.db import make_engine
 from app.logs import correlation_id_var
 from app.outbox import OutboxPublisher, pendentes
+from app.reconciliacao import Reconciliador
 
 log = logging.getLogger("commerce.api")
 
@@ -66,7 +67,15 @@ def create_app(settings: Settings | None = None, engine=None, start_outbox: bool
         else:
             log.warning("publicador do outbox desligado (OUTBOX_PUBLISHER_ENABLED=false ou sem SQS_QUEUE_URL/SQS_QUEUE_NAME)")
         app.state.publisher = publisher
+        # Só faz sentido com o publicador ligado: o reconciliador apenas regrava eventos no outbox.
+        reconciliador = None
+        if start_outbox and settings.reconciliacao_enabled:
+            reconciliador = Reconciliador(engine, settings)
+            reconciliador.start()
+        app.state.reconciliador = reconciliador
         yield
+        if reconciliador:
+            reconciliador.stop()
         if publisher:
             publisher.stop()
         engine.dispose()
@@ -75,6 +84,7 @@ def create_app(settings: Settings | None = None, engine=None, start_outbox: bool
     app.state.engine = engine
     app.state.settings = settings
     app.state.publisher = None
+    app.state.reconciliador = None
 
     @app.middleware("http")
     async def correlation_and_access_log(request: Request, call_next):
@@ -123,6 +133,7 @@ def create_app(settings: Settings | None = None, engine=None, start_outbox: bool
             "service": "commerce-api",
             "checks": checks,
             "outbox": pub.status() if pub else {"ativo": False},
+            "reconciliacao": rec.status() if (rec := app.state.reconciliador) else {"ativo": False},
         }
         return JSONResponse(status_code=200 if body["status"] == "ok" else 503, content=body)
 

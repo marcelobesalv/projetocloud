@@ -38,6 +38,12 @@ class Settings:
     outbox_poll_interval_s: float = 1.0
     outbox_batch_size: int = 10
 
+    # Reconciliação de pedidos PENDENTE parados (app/reconciliacao.py).
+    reconciliacao_enabled: bool = True
+    reconciliacao_intervalo_s: float = 60.0
+    reconciliacao_idade_s: float = 600.0
+    reconciliacao_max_reenvios: int = 3
+
     kit_tiers: list[tuple[int, Decimal]] = field(default_factory=lambda: parse_tiers("2:5,3:8,4:10,5:12"))
     max_qtd_por_item: int = 10
     log_level: str = "INFO"
@@ -62,6 +68,10 @@ class Settings:
             outbox_enabled=_bool("OUTBOX_PUBLISHER_ENABLED", True),
             outbox_poll_interval_s=float(e.get("OUTBOX_POLL_INTERVAL_SECONDS", "1.0")),
             outbox_batch_size=min(int(e.get("OUTBOX_BATCH_SIZE", "10")), 10),
+            reconciliacao_enabled=_bool("RECONCILIACAO_ENABLED", True),
+            reconciliacao_intervalo_s=float(e.get("RECONCILIACAO_INTERVALO_SECONDS", "60")),
+            reconciliacao_idade_s=float(e.get("RECONCILIACAO_IDADE_SECONDS", "600")),
+            reconciliacao_max_reenvios=int(e.get("RECONCILIACAO_MAX_REENVIOS", "3")),
             kit_tiers=parse_tiers(e.get("KIT_DISCOUNT_TIERS", "2:5,3:8,4:10,5:12")),
             max_qtd_por_item=int(e.get("MAX_QTD_POR_ITEM", "10")),
             log_level=e.get("LOG_LEVEL", "INFO"),

@@ -43,6 +43,11 @@ Ferramentas do LLM (`services/chat-api/app/tools.py`): `buscar_produtos`, `consu
 - **Reserva tudo-ou-nada** (`order-worker/app/reserva.py`): trava a linha do pedido (`FOR UPDATE`), só processa
   `PENDENTE`, baixa cada variante com `UPDATE … WHERE quantidade >= :q` em ordem de `estoque_id` (evita deadlock)
   dentro de um savepoint; se algo faltar, desfaz e marca REJEITADO com motivo legível.
+- **Reconciliação** (`commerce-api/app/reconciliacao.py`): thread que, a cada `RECONCILIACAO_INTERVALO_SECONDS`, regrava no
+  outbox o evento de pedidos PENDENTE cujo último evento foi publicado há mais de `RECONCILIACAO_IDADE_SECONDS` (evento
+  perdido: DLQ, fila purgada). Uma task por vez (`pg_try_advisory_xact_lock`, pois o commerce não tem UPDATE em pedidos).
+  Após `RECONCILIACAO_MAX_REENVIOS` o pedido conta como travado: log `reconciliation_cycle.travados` → métrica
+  `OrdersStuck` → alarme `pedidos-travados`. DLQ: `ops/dlq.sh <regiao> ver|reprocessar` (StartMessageMoveTask).
 - **Worker e a fila**: sucesso ou pedido já processado → apaga a mensagem. Erro transitório de banco → não apaga
   (volta pela visibility timeout). Mensagem inválida ou pedido inexistente → não apaga, vai para a DLQ após
   `maxReceiveCount=5`.
@@ -68,7 +73,7 @@ docker compose up -d postgres && docker compose --profile test run --rm tests-co
 No host: `cd services/<svc> && pip install -r requirements.txt -r requirements-dev.txt &&
 TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/postgres pytest`.
 Os testes criam um banco temporário, aplicam as migrações de `db/` (`DB_MIGRATIONS_DIR`) e o apagam no fim.
-Hoje: commerce 23, worker 8, chat 9 testes.
+Hoje: commerce 27, worker 8, chat 9 testes.
 
 Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra: `docs/infra-handoff.md`.
 
@@ -106,7 +111,8 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 - O Haiku às vezes pede confirmação antes de `criar_pedido`; decidir se o prompt deve aceitar "Fechado! Pode fazer o
   pedido" como confirmação suficiente.
 - Sem autenticação nem rate limiting no `POST /chat`; o histórico em `conversas.mensagens` cresce sem limite.
-- Sem job de reconciliação para pedidos PENDENTE antigos e sem ferramenta para reprocessar mensagens da DLQ.
+- Reconciliação e `ops/dlq.sh` ainda não foram implantados na AWS: precisam de imagem nova (`push`), da migração
+  0002 e, em Ohio, de rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
 - Ohio ainda roda `37791f6`: atualizar as task definitions para `82b38f5` (já está no ECR de Ohio).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.

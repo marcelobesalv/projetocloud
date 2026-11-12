@@ -15,7 +15,7 @@ Alvo padrão: **São Paulo (sa-east-1)**, com o Bedrock pelo perfil `global.anth
 | `ecs.tf` | namespace do Service Connect, cluster, launch template (AMI ECS AL2023), ASG, capacity provider |
 | `alb.tf` | ALB (idle 60 s), target group `/health`, listener 80 |
 | `app.tf` | **fase 2**: task definitions, migração (`scripts/run-migrate.sh`), 3 serviços, auto scaling |
-| `observability.tf` | 13 metric filters, alarmes → SNS (fila, DLQ, ALB, LLM, RDS, tasks abaixo do mínimo, reserva do cluster, capacidade do ASG), dashboard |
+| `observability.tf` | 15 metric filters, alarmes → SNS (fila, DLQ, pedidos travados, ALB, LLM, RDS, tasks abaixo do mínimo, reserva do cluster, capacidade do ASG), dashboard |
 | `backend.tf`, `envs/`, `bootstrap/` | state remoto no S3 e valores por região |
 
 ## Como aplicar (CloudShell de sa-east-1)

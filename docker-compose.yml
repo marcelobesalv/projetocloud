@@ -74,6 +74,9 @@ services:
       DB_USER: commerce_api
       DB_PASSWORD: ${COMMERCE_DB_PASSWORD:-commerce_local}
       OUTBOX_PUBLISHER_ENABLED: "true"
+      # Reconciliação de pedidos PENDENTE parados; para demonstrar, use valores curtos (ex.: 5 e 20).
+      RECONCILIACAO_INTERVALO_SECONDS: ${RECONCILIACAO_INTERVALO_SECONDS:-60}
+      RECONCILIACAO_IDADE_SECONDS: ${RECONCILIACAO_IDADE_SECONDS:-600}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     # Serviço interno: sem "ports". Para depurar: docker compose exec commerce-api python -c ...
     expose:
