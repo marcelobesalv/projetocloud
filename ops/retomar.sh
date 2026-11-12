@@ -4,7 +4,7 @@
 set -uo pipefail
 export AWS_REGION=$1 AWS_DEFAULT_REGION=$1; C=setup-pronto-cluster
 aws rds start-db-instance --db-instance-identifier setup-pronto-db --query DBInstance.DBInstanceStatus --output text
-aws autoscaling update-auto-scaling-group --auto-scaling-group-name setup-pronto-ecs-asg --min-size 2 --desired-capacity 2 && echo ASG_2
+aws autoscaling update-auto-scaling-group --auto-scaling-group-name setup-pronto-ecs-asg --min-size 2 --max-size 4 --desired-capacity 2 && echo ASG_2
 aws rds wait db-instance-available --db-instance-identifier setup-pronto-db && echo RDS_OK
 reg(){ aws application-autoscaling register-scalable-target --service-namespace ecs --scalable-dimension ecs:service:DesiredCount \
   --resource-id service/$C/$1 --min-capacity $2 --max-capacity $3 >/dev/null; }

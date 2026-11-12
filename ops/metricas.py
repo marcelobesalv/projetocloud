@@ -15,6 +15,7 @@ As métricas do CloudWatch chegam com 1–3 min de atraso: rode alguns minutos d
 import argparse
 import csv
 import json
+import os
 import subprocess
 import sys
 from collections import defaultdict
@@ -148,10 +149,11 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")  # console do Windows
 
-    import os
     os.environ["AWS_REGION"] = os.environ["AWS_DEFAULT_REGION"] = a.regiao
 
     degraus, cliente = ([], {})
+    if a.carga and os.path.abspath(a.carga) == os.path.abspath(f"{a.saida}.csv"):
+        sys.exit(f"--saida {a.saida} sobrescreveria o CSV da carga ({a.carga}); use outro nome (ex.: relatorio-sp)")
     if a.carga:
         degraus, cliente = ler_carga(a.carga)
         inicio = degraus[0][2] - timedelta(minutes=2)
@@ -227,24 +229,33 @@ def main():
                       f"{fmt(media('req_task', *j))} | {fmt(maxi('tasks_chat', *j))} | {fmt(maxi('inst', *j))} | "
                       f"{fmt(maxi('cpu_res', *j))}% | {e:.0f} | {fmt((media('lat_p90', *j) or 0) * 1000)} | "
                       f"{fmt(ok, 2)} | {c['get_5xx'] + c['get_erro']} |")
+        md += ["", "O p90 do ALB mistura `GET /` (dezenas de ms) com `POST /chat` (segundos: chamadas ao LLM). Com carga "
+               "baixa os turnos do chat passam de 10% das requisições e dominam o p90; a latência das páginas por degrau "
+               "está no resumo do `ops/carga.py` (lado do cliente)."]
         md += ["", "### Tempo de reação", "",
-               "Do início de cada degrau até o primeiro minuto em que o número de tasks do chat-api / de instâncias "
-               "chegou ao valor máximo daquele degrau (no degrau de descida, ao mínimo). Resolução de 1 min. O último "
-               "degrau inclui a folga depois da carga, onde acontece o scale-in.", "",
-               "| degrau | tasks: de → para | tempo | instâncias: de → para | tempo |", "|---|---|---|---|---|"]
+               "Contado do início de cada degrau, pelas tasks do chat-api e instâncias **em execução** (resolução de "
+               "1 min): quando o número mudou pela primeira vez e quando chegou ao máximo do degrau (no degrau de "
+               "descida, ao mínimo). O último degrau inclui a folga depois da carga, onde acontece o scale-in.", "",
+               "| degrau | tasks: de → para | 1ª mudança | completo | instâncias: de → para | 1ª mudança | completo |",
+               "|---|---|---|---|---|---|---|"]
         for n, (d, rps, ini, fim_d) in enumerate(degraus):
             linha = [str(d)]
             ate = fim if n == len(degraus) - 1 else fim_d
+            minutos_ = lambda m: f"{(m - ini).total_seconds() / 60:.0f} min"  # noqa: E731
             for i in ("tasks_chat", "inst"):
                 ms = [m for m in minutos if ini.replace(second=0) <= m < ate and i in serie[m]]
                 if not ms:
-                    linha += ["-", "-"]
+                    linha += ["-", "-", "-"]
                     continue
                 antes, alvo = serie[ms[0]][i], max(serie[m][i] for m in ms)
                 if alvo <= antes:
                     alvo = min(serie[m][i] for m in ms)  # degrau de descida: tempo até o mínimo
+                if alvo == antes:
+                    linha += [f"{antes:.0f}", "-", "-"]
+                    continue
+                primeira = next(m for m in ms if serie[m][i] != antes)
                 chegou = next(m for m in ms if serie[m][i] == alvo)
-                linha += [f"{antes:.0f} → {alvo:.0f}", "-" if alvo == antes else f"{(chegou - ini).total_seconds() / 60:.0f} min"]
+                linha += [f"{antes:.0f} → {alvo:.0f}", minutos_(primeira), minutos_(chegou)]
             md.append("| " + " | ".join(linha) + " |")
 
     md += ["", "## Atividades de escala", ""]

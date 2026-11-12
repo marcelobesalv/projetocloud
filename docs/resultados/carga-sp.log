@@ -1,0 +1,105 @@
+== 2026-11-12T19:20:07Z degrau 1/4: 0.5 req/s por 300s
+[30s d1 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 19ms p90 36ms | chat 2/2 p90 5262ms
+[60s d1 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 20ms p90 44ms | chat 3/3 p90 5974ms
+[90s d1 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 22ms p90 35ms | chat 3/3 p90 4707ms
+[120s d1 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 24ms p90 44ms | chat 3/3 p90 4600ms
+[150s d1 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 33ms p90 36ms | chat 3/3 p90 5372ms
+[180s d1 0.5rps] GET 14 (2xx 14, 5xx 0, erro 0) p50 34ms p90 38ms | chat 3/3 p90 5311ms
+[210s d1 0.5rps] GET 16 (2xx 16, 5xx 0, erro 0) p50 33ms p90 3055ms | chat 3/3 p90 5031ms
+[240s d1 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 38ms p90 158ms | chat 3/3 p90 4778ms
+[270s d1 0.5rps] GET 16 (2xx 16, 5xx 0, erro 0) p50 31ms p90 42ms | chat 3/3 p90 4493ms
+== 2026-11-12T19:25:07Z degrau 2/4: 2.0 req/s por 600s
+[300s d1 0.5rps] GET 14 (2xx 14, 5xx 0, erro 0) p50 29ms p90 36ms | chat 3/3 p90 4926ms
+[300s d2 2.0rps] GET 1 (2xx 1, 5xx 0, erro 0) p50 49ms p90 49ms | chat 0/0 p90 Nonems
+[330s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 20ms p90 35ms | chat 3/3 p90 4130ms
+[360s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 22ms p90 37ms | chat 3/3 p90 4822ms
+[390s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 23ms p90 34ms | chat 3/3 p90 5110ms
+[420s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 30ms p90 58ms | chat 3/3 p90 4390ms
+[450s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 66ms p90 160ms | chat 3/3 p90 4689ms
+[480s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 24ms p90 58ms | chat 3/3 p90 4432ms
+[510s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 20ms p90 35ms | chat 3/3 p90 4327ms
+[540s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 19ms p90 34ms | chat 3/3 p90 4312ms
+[570s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 25ms p90 39ms | chat 3/3 p90 4931ms
+[600s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 21ms p90 40ms | chat 3/3 p90 4535ms
+[630s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 21ms p90 43ms | chat 3/3 p90 4473ms
+[660s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 20ms p90 35ms | chat 3/3 p90 4274ms
+[690s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 21ms p90 43ms | chat 3/3 p90 4711ms
+[720s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 26ms p90 49ms | chat 3/3 p90 4816ms
+[750s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 24ms p90 40ms | chat 3/3 p90 5605ms
+[780s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 23ms p90 41ms | chat 3/3 p90 4598ms
+[810s d2 2.0rps] GET 60 (2xx 59, 5xx 1, erro 0) p50 20ms p90 37ms | chat 3/3 p90 4285ms
+[840s d2 2.0rps] GET 60 (2xx 59, 5xx 1, erro 0) p50 22ms p90 40ms | chat 3/3 p90 4369ms
+[870s d2 2.0rps] GET 60 (2xx 60, 5xx 0, erro 0) p50 23ms p90 41ms | chat 3/3 p90 5076ms
+== 2026-11-12T19:35:07Z degrau 3/4: 4.0 req/s por 600s
+[900s d2 2.0rps] GET 59 (2xx 58, 5xx 1, erro 0) p50 26ms p90 44ms | chat 3/3 p90 5191ms
+[900s d3 4.0rps] GET 1 (2xx 1, 5xx 0, erro 0) p50 41ms p90 41ms | chat 0/0 p90 Nonems
+[930s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 22ms p90 39ms | chat 3/3 p90 4553ms
+[960s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 24ms p90 43ms | chat 3/3 p90 7311ms
+[990s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 18ms p90 39ms | chat 3/3 p90 4622ms
+[1020s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 18ms p90 36ms | chat 3/3 p90 4294ms
+[1050s d3 4.0rps] GET 121 (2xx 121, 5xx 0, erro 0) p50 19ms p90 45ms | chat 3/3 p90 4885ms
+[1080s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 19ms p90 37ms | chat 3/3 p90 4633ms
+[1110s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 22ms p90 39ms | chat 3/3 p90 4354ms
+[1140s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 22ms p90 38ms | chat 3/3 p90 4593ms
+[1170s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 17ms p90 29ms | chat 3/3 p90 5118ms
+[1200s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 21ms p90 70ms | chat 3/3 p90 4448ms
+[1230s d3 4.0rps] GET 119 (2xx 119, 5xx 0, erro 0) p50 26ms p90 45ms | chat 3/3 p90 6228ms
+[1260s d3 4.0rps] GET 121 (2xx 121, 5xx 0, erro 0) p50 33ms p90 93ms | chat 3/3 p90 4460ms
+[1290s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 20ms p90 44ms | chat 3/3 p90 4491ms
+[1320s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 24ms p90 43ms | chat 3/3 p90 7052ms
+[1350s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 22ms p90 51ms | chat 3/3 p90 4490ms
+[1380s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 22ms p90 39ms | chat 3/3 p90 5289ms
+[1410s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 19ms p90 41ms | chat 3/3 p90 4471ms
+[1440s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 21ms p90 40ms | chat 3/3 p90 5224ms
+[1470s d3 4.0rps] GET 120 (2xx 120, 5xx 0, erro 0) p50 21ms p90 33ms | chat 3/3 p90 5031ms
+== 2026-11-12T19:45:07Z degrau 4/4: 0.5 req/s por 1200s
+[1500s d3 4.0rps] GET 118 (2xx 118, 5xx 0, erro 0) p50 27ms p90 52ms | chat 3/3 p90 4614ms
+[1500s d4 0.5rps] GET 1 (2xx 1, 5xx 0, erro 0) p50 18ms p90 18ms | chat 0/0 p90 Nonems
+[1530s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 29ms p90 81ms | chat 3/3 p90 4669ms
+[1560s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 23ms p90 42ms | chat 3/3 p90 4656ms
+[1590s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 28ms p90 70ms | chat 3/3 p90 4196ms
+[1620s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 24ms p90 41ms | chat 3/3 p90 4353ms
+[1650s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 26ms p90 45ms | chat 3/3 p90 5277ms
+[1680s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 24ms p90 43ms | chat 3/3 p90 4205ms
+[1710s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 27ms p90 39ms | chat 3/3 p90 4601ms
+[1740s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 21ms p90 58ms | chat 3/3 p90 4292ms
+[1770s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 36ms p90 67ms | chat 3/3 p90 4640ms
+[1800s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 54ms p90 112ms | chat 3/3 p90 4635ms
+[1830s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 28ms p90 45ms | chat 3/3 p90 4459ms
+[1860s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 30ms p90 57ms | chat 3/3 p90 4539ms
+[1890s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 19ms p90 53ms | chat 3/3 p90 4840ms
+[1920s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 28ms p90 66ms | chat 3/3 p90 6081ms
+[1950s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 28ms p90 45ms | chat 3/3 p90 4437ms
+[1980s d4 0.5rps] GET 14 (2xx 14, 5xx 0, erro 0) p50 22ms p90 37ms | chat 3/3 p90 6827ms
+[2010s d4 0.5rps] GET 16 (2xx 16, 5xx 0, erro 0) p50 118ms p90 583ms | chat 3/3 p90 4429ms
+[2040s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 23ms p90 35ms | chat 3/3 p90 4251ms
+[2070s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 22ms p90 52ms | chat 3/3 p90 5986ms
+[2100s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 26ms p90 38ms | chat 3/3 p90 4417ms
+[2130s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 24ms p90 164ms | chat 3/3 p90 5822ms
+[2160s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 22ms p90 31ms | chat 3/3 p90 4437ms
+[2190s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 24ms p90 35ms | chat 3/3 p90 5576ms
+[2220s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 23ms p90 41ms | chat 3/3 p90 4624ms
+[2250s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 20ms p90 32ms | chat 3/3 p90 4536ms
+[2280s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 26ms p90 36ms | chat 3/3 p90 4543ms
+[2310s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 29ms p90 38ms | chat 3/3 p90 4447ms
+[2340s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 26ms p90 37ms | chat 3/3 p90 4672ms
+[2370s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 28ms p90 38ms | chat 3/3 p90 4628ms
+[2400s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 35ms p90 47ms | chat 3/3 p90 4535ms
+[2430s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 19ms p90 26ms | chat 3/3 p90 4707ms
+[2460s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 20ms p90 28ms | chat 2/2 p90 4497ms
+[2490s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 23ms p90 35ms | chat 4/4 p90 10536ms
+[2520s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 25ms p90 39ms | chat 3/3 p90 4174ms
+[2550s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 32ms p90 56ms | chat 3/3 p90 4677ms
+[2580s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 33ms p90 37ms | chat 3/3 p90 4461ms
+[2610s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 25ms p90 42ms | chat 3/3 p90 4543ms
+[2640s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 22ms p90 41ms | chat 3/3 p90 4919ms
+[2670s d4 0.5rps] GET 15 (2xx 15, 5xx 0, erro 0) p50 21ms p90 50ms | chat 3/3 p90 4315ms
+== fim da carga; esperando as requisições em andamento
+[2700s d4 0.5rps] GET 14 (2xx 14, 5xx 0, erro 0) p50 21ms p90 41ms | chat 3/3 p90 5932ms
+
+== resumo por degrau
+degrau  alvo_rps  GET  2xx%   5xx  erro  p50_ms  p90_ms  p99_ms
+     1       0.5   150  100.00     0     0      30      46    3055
+     2       2.0  1200  99.75     3     0      23      43     128
+     3       4.0  2400  100.00     0     0      21      42     135
+     4       0.5   600  100.00     0     0      26      47     286

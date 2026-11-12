@@ -1,0 +1,38 @@
+região sa-east-1 · http://setup-pronto-alb-1512532875.sa-east-1.elb.amazonaws.com/
+== 20:41:34 1. order-worker fora do ar (limites atuais: 1..4)
+order-worker	0
+== 20:41:52 2. pedido pelo chat
+Se quiser acompanhar, peça a consulta de status novamente daqui a alguns instantes.
+
+### 8 (3.0s, ok) > Qual o status do pedido?
+O pedido 88ae969d-1d63-4099-a2cf-99c8216ac7b3 continua **PENDENTE**, sem motivo de rejeição. A reserva de estoque ainda não foi concluída.
+
+Posso consultar de novo quando quiser.
+
+conversa d9ac6951-345f-42b3-95ac-0afad5205f34
+pedido 88ae969d-1d63-4099-a2cf-99c8216ac7b3 (correlation_id fa5bcf22-7ad4-4647-9cac-717095a129f1), conversa d9ac6951-345f-42b3-95ac-0afad5205f34
+== 20:42:44 3. fila antes da purga: 1 mensagem(ns); purgando
+order-worker	1
+== 20:43:48 4. esperando a reconciliação (até 20 min)
+   20:44:52 ainda PENDENTE, aguardando o reenvio
+   20:45:56 ainda PENDENTE, aguardando o reenvio
+   20:46:59 ainda PENDENTE, aguardando o reenvio
+   20:48:03 ainda PENDENTE, aguardando o reenvio
+   20:49:07 ainda PENDENTE, aguardando o reenvio
+   20:50:11 ainda PENDENTE, aguardando o reenvio
+   20:51:15 ainda PENDENTE, aguardando o reenvio
+   20:52:19 ainda PENDENTE, aguardando o reenvio
+   20:52:51 reenviado pelo commerce-api (order_requeued)
+   20:53:03 processado pelo worker: {"timestamp": "2026-11-12T20:52:44.279+00:00", "level": "INFO", "service": "order-worker", "logger": "worker.consumer", "message": "pedido confirmado", "correlation_id": "fa5bcf22-7ad4-4647-9cac-717095a129f1", "event": "order_processed", "p
+== status pelo chat
+O pedido 88ae969d-1d63-4099-a2cf-99c8216ac7b3 está **CONFIRMADO**. A reserva de estoque foi concluída.
+
+- **Cliente:** Ana Souza
+- **Total:** R$ 986,40
+
+Os itens são:
+- Logitech K380 Multi-Device, ABNT2 grafite
+- Logitech Pebble Mouse 2 M350s, grafite
+- Logitech Zone Vibe 100, grafite
+- Mousepad Redragon Speed XL 90x40 cm, preto
+Logs do pedido em todos os serviços: CloudWatch Logs Insights com  filter correlation_id = "fa5bcf22-7ad4-4647-9cac-717095a129f1"

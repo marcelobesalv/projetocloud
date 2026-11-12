@@ -5,9 +5,10 @@ URL = sys.argv[1].rstrip("/") + "/chat"
 MSGS = [
     "Tenho um MacBook Air só com USB-C e Bluetooth, uso macOS. Procuro teclado e mouse sem fio.",
     "Esses são compatíveis com meu Mac? Prefiro layout ABNT2.",
-    "Monta um kit com o teclado, o mouse e um headset.",
+    # Itens explícitos: com o LLM real, "o teclado, o mouse" é ambíguo e ele (corretamente) pede para escolher.
+    "Monta um kit com o Logitech K380 ABNT2 grafite, o Pebble Mouse 2 grafite e o headset Zone Vibe 100 grafite.",
     "Consegue um desconto maior?",
-    "Então adiciona um mousepad.",
+    "Então adiciona o mousepad Speed XL preto.",
     "Fechado! Pode fazer o pedido no nome de Ana Souza.",
     "Sim, confirmo. Pode registrar.",
     "Qual o status do pedido?",

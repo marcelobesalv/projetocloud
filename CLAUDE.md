@@ -96,10 +96,22 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
   validado com roteiro completo, teste de carga (2→6 tasks, 3→4 instâncias, 0 erros) e testes de falha (DLQ, commerce fora).
 - **São Paulo (sa-east-1)**: `infra/terraform` (ver o README de lá), em duas fases (`deploy_app`), state no S3
   (`setup-pronto-tfstate-202757356229-sa-east-1`, criado por `bootstrap/`). Recriado do zero em 04/11 (destroy de 115
-  recursos + apply) e rodando a imagem `82b38f5`, publicada do código com `push.ps1`. Cópia de trabalho do Terraform em
-  `~/tf` e scripts em `~/ops` no CloudShell de sa-east-1 (`TF_DATA_DIR=/tmp/tfdata`, Terraform 1.11.4 em `~/bin`).
+  recursos + apply). Desde 12/11 roda a imagem `bc328c5` (reconciliação, migração 0002, alarme `pedidos-travados`).
+  Cópia de trabalho antiga do Terraform em `~/tf` no CloudShell de sa-east-1: **dar pull antes de aplicar de lá**.
+  O apply de 12/11 foi feito de um Windows com a AWS CLI (SSO) e o Terraform num container `amazon/aws-cli` + Terraform
+  1.11.4 (o `run-migrate.sh` precisa de bash e python3).
 - Testes em São Paulo (04/11): perda abrupta da instância mais carregada → ASG repõe em ~1 min, ~1% de 502 por ~10 s;
   drenagem planejada sem erros. Resultados no doc "Setup Pronto — roteiro da apresentação".
+- Testes em São Paulo (12/11), resultados em `docs/resultados/` (`relatorio-sp.{md,html,csv}`, `carga-sp.log`,
+  `reconciliacao-sp.log`): carga em degraus 0,5→2→4→0,5 req/s por 45 min, 4.622 requisições, 3 respostas 502 do ALB
+  no scale-out (99,935%); chat-api 2→6 tasks (1ª mudança 7 min após o degrau, 6 em 10 min), frota 3→4 instâncias
+  (7 min); scale-in 6→2 tasks em 36 min (uma a cada ~6 min, cooldown 300 s) e 4→3 instâncias em 48 min, com a
+  managed termination protection liberando só a instância vazia. Reconciliação: pedido com a mensagem purgada foi
+  reenviado após ~10 min e CONFIRMADO com o mesmo `correlation_id`.
+- Base da frota: 3 instâncias, não 2 — com target capacity 90%, 2 instâncias "necessárias" viram 3. Um deploy (200% das
+  tasks) sobe a frota ao máximo (4) e ela leva ~15 min para voltar; espere estabilizar antes de medir.
+- Pausar: `ops/pausar.sh` zera min/max/desejado do ASG e tira a proteção de scale-in (com 0 tasks e 0 instâncias a
+  reserva do capacity provider é 100% > 90% e ele subiria uma instância). O RDS parado religa sozinho após 7 dias.
 - No CloudShell, `AWS_REGION` vem definido e tem precedência sobre `AWS_DEFAULT_REGION`: scripts exportam os dois.
 - Os dois ambientes ficam pausados fora das sessões (`ops/pausar.sh`); `ops/retomar.sh` ou `terraform apply` religam.
 - Operação e testes: `ops/` (status, carga, demo, perda de instância, drenagem, alarmes extras de Ohio).
@@ -111,11 +123,9 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 - O Haiku às vezes pede confirmação antes de `criar_pedido`; decidir se o prompt deve aceitar "Fechado! Pode fazer o
   pedido" como confirmação suficiente.
 - Sem autenticação nem rate limiting no `POST /chat`; o histórico em `conversas.mensagens` cresce sem limite.
-- Reconciliação e `ops/dlq.sh` ainda não foram implantados na AWS: precisam de imagem nova (`push`), da migração
-  0002 e, em Ohio, de rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
-  Passo a passo para São Paulo, junto com a carga em degraus e o relatório: `docs/roteiro-sao-paulo.md`
-  (`ops/carga.py --degraus ... --csv`, `ops/metricas.py --carga`, `ops/teste-reconciliacao.sh`). Resultados vão em
-  `docs/resultados/`.
+- Ohio ainda roda `37791f6`, sem a reconciliação: para atualizar, publicar `bc328c5` no ECR de Ohio, `TAG=... s4-tasks.sh`
+  e rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
+- Plano até a entrega (20/11): CloudTrail + runbook de incidentes; WAF com rate limit no ALB; HTTPS via CloudFront;
+  prompt aceitar "Fechado! Pode fazer o pedido"; limitar `conversas.mensagens`; diagrama; destroy + apply do zero.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
-- Ohio ainda roda `37791f6`: atualizar as task definitions para `82b38f5` (já está no ECR de Ohio).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.

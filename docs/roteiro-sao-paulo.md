@@ -91,7 +91,8 @@ Plano: a política do chat-api é **30 req/min por task** (0,5 req/s por task), 
 | 4 | 0,5 req/s | 20 min | scale-in: o target tracking reduz tasks após ~15 min abaixo do alvo; depois o capacity provider remove a instância vazia |
 
 ```powershell
-python ops/carga.py http://<dns do ALB> --degraus 0.5:300,2:600,4:600,0.5:1200 --chat-cada 10 --csv carga-sp.csv
+python ops/carga.py http://<dns do ALB> --degraus 0.5:300,2:600,4:600,0.5:1200 --chat-cada 10 `
+  --csv docs/resultados/carga-sp-cliente.csv > docs/resultados/carga-sp.log
 ```
 
 `--chat-cada 10` faz um turno com o Bedrock a cada 10 s (~270 turnos), para a carga incluir o caminho real
@@ -102,12 +103,18 @@ para os slides.
 ## 6. Relatório (local, 5 min depois do fim da carga)
 
 ```powershell
-python ops/metricas.py --regiao sa-east-1 --carga carga-sp.csv --folga-min 15 --saida docs/resultados/carga-sp
+python ops/metricas.py --regiao sa-east-1 --carga docs/resultados/carga-sp-cliente.csv --folga-min 35 --saida docs/resultados/relatorio-sp
 ```
 
-Gera `docs/resultados/carga-sp.{csv,md,html}`: por minuto (tasks, instâncias, requisições, 5xx, latência, reserva),
-resumo por degrau, tempo de reação do auto scaling e as atividades de escala. O `.html` tem os gráficos. A folga de 15 min
-cobre o scale-in, que só começa ~15 min depois de a carga cair. Commite os três arquivos e o `carga-sp.csv`.
+Gera `docs/resultados/relatorio-sp.{csv,md,html}`: por minuto (tasks, instâncias, requisições, 5xx, latência, reserva),
+resumo por degrau, tempo de reação do auto scaling e as atividades de escala. O `.html` tem os gráficos. **Use um nome de
+saída diferente do CSV da carga** (o script recusa se forem iguais). A folga cobre o scale-in: as tasks começam a cair
+~15 min depois de a carga baixar e a instância vazia sai ~15 min depois disso; rode quando o ASG voltar à base.
+Commite tudo o que estiver em `docs/resultados/`.
+
+No Windows (Git Bash): o `python3` costuma ser o atalho da Microsoft Store, os `.sh` precisam de LF (o `.gitattributes`
+garante isso em checkouts novos) e o `docker login` no ECR pode falhar no gerenciador de credenciais do Windows
+("The stub received bad data"); nesse caso, rode as partes de bash no CloudShell.
 
 Números para levar à apresentação: disponibilidade (1 − 5xx/requisições), tempo de reação de tasks e de instâncias
 em cada degrau, p90 por degrau e requisições por task comparadas ao alvo de 30/min.

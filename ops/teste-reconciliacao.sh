@@ -32,8 +32,9 @@ python3 demo.py "http://$ALB_DNS" | tee /tmp/demo-reconc.log | tail -n 8
 CONV=$(awk '/^conversa/{print $2}' /tmp/demo-reconc.log)
 sleep 5
 EV=$(aws logs filter-log-events --log-group-name "$LG/commerce-api" --start-time $INICIO \
-  --filter-pattern '{ $.event = "order_created" }' --query 'events[-1].message' --output text)
-[ "$EV" = None ] && { echo "nenhum pedido criado (veja a conversa acima)"; exit 1; }
+  --filter-pattern '{ $.event = "order_created" }' --query 'events[].message' --output text \
+  | tr '\t' '\n' | grep order_created | tail -n 1)  # a CLI pagina e aplica o --query por página
+[ -z "$EV" ] && { echo "nenhum pedido criado (veja a conversa acima)"; exit 1; }
 PEDIDO=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["pedido_id"])' "$EV")
 CID=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("correlation_id") or "")' "$EV")
 echo "pedido $PEDIDO (correlation_id $CID), conversa $CONV"
