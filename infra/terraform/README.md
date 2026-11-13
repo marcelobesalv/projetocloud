@@ -14,7 +14,8 @@ Alvo padrão: **São Paulo (sa-east-1)**, com o Bedrock pelo perfil `global.anth
 | `iam.tf` | instance role, execution role (só os 4 segredos), task roles: chat (só o perfil do Bedrock), commerce (SendMessage), worker (consumir) |
 | `ecs.tf` | namespace do Service Connect, cluster, launch template (AMI ECS AL2023), ASG, capacity provider |
 | `alb.tf` | ALB (idle 60 s), target group `/health`, listener 80 |
-| `app.tf` | **fase 2**: task definitions, migração (`scripts/run-migrate.sh`), 3 serviços, auto scaling |
+| `build.tf` | build das imagens dentro do apply: código no S3 → CodeBuild → ECR da região (`scripts/build-imagens.sh`) |
+| `app.tf` | task definitions, migração (`scripts/run-migrate.sh`), 3 serviços, auto scaling |
 | `observability.tf` | 15 metric filters, alarmes → SNS (fila, DLQ, pedidos travados, ALB, LLM, RDS, tasks abaixo do mínimo, reserva do cluster, capacidade do ASG), dashboard |
 | `audit.tf` | CloudTrail multirregião (S3 privado com validação de integridade + CloudWatch Logs), 6 métricas e 5 alarmes de segurança (padrões CIS), 7 consultas salvas do Logs Insights; o que fazer em cada alarme: `docs/runbook.md` |
 | `edge.tf` | borda: CloudFront (HTTPS `*.cloudfront.net`, sem cache, origem com 60 s de timeout), WAF em us-east-1 (limite por IP no `POST /chat` e geral, IP reputation, known bad inputs, common rule set; logs só dos bloqueios), ALB só para o CloudFront (prefix list no SG + cabeçalho secreto no listener) |
@@ -31,33 +32,40 @@ export PATH=~/bin:$PATH TF_DATA_DIR=/tmp/tfdata   # o home do CloudShell tem só
 # 1) Bucket do state remoto (uma vez por conta/região; state local só deste módulo)
 (cd bootstrap && terraform init && terraform apply -var region=sa-east-1)
 
-# 2) Fase 1: rede, dados, ECR, IAM, cluster, ALB, observabilidade (~10 min, o RDS é o mais lento)
+# 2) O ambiente inteiro, num único apply (~10 min): rede, RDS, ECR, IAM, cluster, ALB, borda, auditoria e
+#    observabilidade; o CodeBuild constrói e publica as imagens a partir do código (build.tf); depois a migração
+#    (run-task; o apply falha se exitCode ≠ 0), os serviços e o auto scaling.
 terraform init -backend-config=envs/sa-east-1.backend.hcl
 terraform apply -var-file=envs/sa-east-1.tfvars
-
-# 3) Imagens no ECR de São Paulo, a partir do código (na máquina de build, com Docker):
-#      ./push.sh sa-east-1 <conta>          (ou .\push.ps1 sa-east-1 <conta>)
-#    Alternativa sem rebuild, copiando de outra região: scripts/copiar-imagens.sh us-east-2 sa-east-1 <tag>
-
-# 4) Fase 2: task definitions → migração (run-task; o apply falha se exitCode ≠ 0) → serviços → auto scaling
-terraform apply -var-file=envs/sa-east-1.tfvars -var deploy_app=true -var image_tag=<tag>
 terraform output url
 
 # Remover tudo
-terraform destroy -var-file=envs/sa-east-1.tfvars -var deploy_app=true -var image_tag=<tag>
+terraform destroy -var-file=envs/sa-east-1.tfvars
 ```
 
-Nova versão: publique a imagem com a nova tag e repita o passo 4 com ela. A migração roda de novo (nova revisão
-da task definition) antes de os serviços trocarem de revisão; o circuit breaker desfaz um deploy que não estabiliza.
+Nova versão: commit e `terraform apply` de novo. A tag das imagens é um hash do código: mudou o código, o CodeBuild
+constrói a tag nova, a migração roda (nova revisão da task definition) e os serviços trocam de revisão; o circuit
+breaker desfaz um deploy que não estabiliza. Código igual não gera build nem deploy.
+Para usar imagens publicadas de outro jeito (`push.sh`), passe `-var image_tag=<tag>` (o build não roda).
+`-var deploy_app=false` cria só a infraestrutura, sem a aplicação.
 Trocar as senhas dos usuários de banco: `-var db_password_version=2` (grava novas senhas, roda a migração, que faz
 `ALTER ROLE`, e força novas tasks).
 
+O bucket do state é o único pré-requisito fora deste módulo: o backend precisa existir antes do `terraform init`.
+
 Outra região: copie `envs/sa-east-1.*` para a nova região (bucket do bootstrap, `region`, `vpc_cidr`, perfil do
-Bedrock disponível lá). AMI (parâmetro SSM), zonas (data source), endpoints e ARNs são obtidos na própria região.
+Bedrock disponível lá). AMI (parâmetro SSM), zonas (data source), endpoints, ARNs e imagens (construídas no ECR da
+própria região) são obtidos ali; só o WAF da borda fica em us-east-1, porque a AWS só o oferece lá para o CloudFront.
 
 ## Decisões
-- **Duas fases** (`deploy_app`): o ECR precisa existir antes do push, e os serviços só sobem depois da migração
-  (sem ela, o `/health` falha porque os usuários de banco não existem e o circuit breaker marcaria o deploy como falho).
+- **Um apply só, imagens construídas na AWS** (`build.tf`): o código vai para um bucket S3 da região e um CodeBuild
+  (Docker privilegiado, role que só lê o bucket e publica nos 4 repositórios) faz build e push no ECR da própria
+  região; o apply espera o build. A ordem ECR → imagens → migração → serviços vem das dependências: sem a migração,
+  o `/health` falharia (os usuários de banco não existiriam) e o circuit breaker marcaria o deploy como falho.
+  Imagem base pelo espelho `public.ecr.aws/docker/library` (o Docker Hub limita downloads anônimos do CodeBuild).
+  Testado do zero em 13/11: 173 recursos em 9 min (`docs/resultados/recriacao-sp.md`).
+- **Propagação do IAM**: CodeBuild e migração rodam segundos depois de as roles serem criadas; os scripts repetem
+  apenas a falha "not authorized" da fila/início, com espera.
 - **Borda com CloudFront + WAF** (`edge.tf`): HTTPS sem domínio próprio (certificado `*.cloudfront.net`) e o WAF na
   frente de tudo. Para ninguém contornar o WAF, o SG do ALB aceita só a prefix list
   `com.amazonaws.global.cloudfront.origin-facing` e o listener responde 403 a quem não traz o cabeçalho

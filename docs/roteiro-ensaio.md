@@ -24,7 +24,7 @@ CloudFront e o Python certo (`ops/comum.sh`).
 
 ## 1. MVP funcionando (ao vivo, ~3 min)
 
-Rubrica 1. Na página `https://d36s1ot5jejh6l.cloudfront.net/` (ou `bash -c 'cd ops && source comum.sh && $PY demo.py $URL'`):
+Rubrica 1. Na página `https://d29glptl5pxvls.cloudfront.net/` (ou `bash -c 'cd ops && source comum.sh && $PY demo.py $URL'`):
 o roteiro de 8 frases (busca → compatibilidade → kit de R$ 889,64 → pedido de desconto → mousepad, R$ 986,40 →
 "Fechado! Pode fazer o pedido no nome de Ana Souza." → CONFIRMADO).
 
@@ -111,7 +111,7 @@ manual). Ao vivo, provar que o que está rodando é exatamente o código: `terra
 (rode antes do passo 2, com o ambiente estável; o auto scaling muda contagens, que o Terraform ignora):
 
 ```bash
-cd infra/terraform && terraform plan -var-file=envs/sa-east-1.tfvars -var deploy_app=true -var image_tag=52bc501
+cd infra/terraform && terraform plan -var-file=envs/sa-east-1.tfvars
 ```
 
 (Terraform configurado como no `infra/terraform/README.md`. Única diferença legítima: se a AWS publicou uma AMI do ECS

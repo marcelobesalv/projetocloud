@@ -55,7 +55,7 @@ do serviço.
 | Etapa | Região | Como foi feita | Endereço |
 |---|---|---|---|
 | Manual | Ohio (us-east-2) | `docs/etapa-manual-ohio/` (AWS CLI no CloudShell) | `http://setup-pronto-alb-562905076.us-east-2.elb.amazonaws.com/` |
-| Terraform | São Paulo (sa-east-1) | `infra/terraform/` (state no S3) | `https://d36s1ot5jejh6l.cloudfront.net/` (CloudFront + WAF; o ALB só aceita o CloudFront) |
+| Terraform | São Paulo (sa-east-1) | `infra/terraform/` (state no S3) | `https://d29glptl5pxvls.cloudfront.net/` (CloudFront + WAF; o ALB só aceita o CloudFront) |
 
 Os dois ambientes ficam **pausados** fora das sessões de trabalho, porque custam por hora. Para religar:
 - São Paulo: `terraform apply` com a tag publicada (ver `infra/terraform/README.md`).
@@ -68,7 +68,8 @@ Para trabalhar na AWS, cada pessoa precisa:
 - do CloudShell da região, ou da AWS CLI com `aws sso login`.
 
 Não há senha nem chave para repassar: os segredos ficam no Secrets Manager, e o state do Terraform fica no bucket
-`setup-pronto-tfstate-202757356229-sa-east-1`. Imagens novas são publicadas com `./push.sh <regiao> <conta>`; a tag é o commit curto.
+`setup-pronto-tfstate-202757356229-sa-east-1`. As imagens são construídas pelo próprio `terraform apply` (CodeBuild, tag = hash do código); `./push.sh` continua
+disponível para publicar manualmente (com `-var image_tag`).
 
 ## Subindo localmente
 

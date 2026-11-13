@@ -75,7 +75,7 @@ TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/po
 Os testes criam um banco temporário, aplicam as migrações de `db/` (`DB_MIGRATIONS_DIR`) e o apagam no fim.
 Hoje: commerce 27, worker 8, chat 10 testes.
 
-Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra: `docs/infra-handoff.md`.
+Imagens: construídas pelo `terraform apply` (CodeBuild); `./push.sh <regiao> <conta>` só para uso manual com `-var image_tag`. Handoff de infra: `docs/infra-handoff.md`.
 
 ## Convenções
 - Python 3.12, FastAPI, SQLAlchemy Core com SQL explícito (`text()`), psycopg 3. Sem ORM.
@@ -94,15 +94,17 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 ## Estado da implantação (nov/2026)
 - **Ohio (us-east-2)**: montado à mão via CloudShell (scripts `s1`–`s6` no home do CloudShell de Ohio), imagem `37791f6`,
   validado com roteiro completo, teste de carga (2→6 tasks, 3→4 instâncias, 0 erros) e testes de falha (DLQ, commerce fora).
-- **São Paulo (sa-east-1)**: `infra/terraform` (ver o README de lá), em duas fases (`deploy_app`), state no S3
+- **São Paulo (sa-east-1)**: `infra/terraform` (ver o README de lá), **um único `terraform apply`** (o CodeBuild
+  constrói as imagens dentro do apply, `build.tf`), state no S3
   (`setup-pronto-tfstate-202757356229-sa-east-1`, criado por `bootstrap/`). Recriado do zero em 04/11 (115 recursos) e de
   novo em 13/11, já com borda e auditoria: destroy de 159 recursos em 6 min, fase 1 com 145 em 8 min, fase 2 com 14
-  em 39 s, nada manual (`docs/resultados/recriacao-sp.md`). Roda a imagem `52bc501` (versão final: reconciliação,
-  prompt novo, limite do histórico).
+  em 39 s; e de novo com o apply único: 173 recursos em 9 min a partir do state vazio (`docs/resultados/recriacao-sp.md`).
+  Imagens com tag = hash do código (`4efa7a282ee1`, mesmo código do commit `52bc501`). Scripts do apply repetem só a falha
+  de propagação do IAM ("not authorized") — necessária em todo apply do zero.
   Cópia de trabalho antiga do Terraform em `~/tf` no CloudShell de sa-east-1: **dar pull antes de aplicar de lá**.
   O apply de 12/11 foi feito de um Windows com a AWS CLI (SSO) e o Terraform num container `amazon/aws-cli` + Terraform
   1.11.4 (o `run-migrate.sh` precisa de bash e python3).
-- **Borda de São Paulo** (`edge.tf`, desde 12/11): o endereço público é o CloudFront `https://d36s1ot5jejh6l.cloudfront.net/`
+- **Borda de São Paulo** (`edge.tf`, desde 12/11): o endereço público é o CloudFront `https://d29glptl5pxvls.cloudfront.net/`
   (WAF em us-east-1: 100 `POST /chat` e 3.000 requisições por IP em 5 min → 429). O ALB **não** aceita acesso direto
   (SG só com a prefix list do CloudFront + listener exigindo `X-Origem-CloudFront`). `ops/comum.sh` exporta `URL` (CloudFront
   da região ou, em Ohio, o ALB); scripts e cargas devem usar `$URL`.
@@ -128,7 +130,7 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 ## O que ainda falta
 - Sem autenticação no `POST /chat` (o WAF limita por IP). Histórico gravado limitado a `HISTORY_STORED_MAX_MESSAGES` (200).
 - Prompt (regra 5, 13/11): aceite + nome depois do último `calcular_kit` já é a confirmação; validado com o Haiku real
-  (`docs/resultados/confirmacao-pedido-bedrock.log`). Em produção em SP desde 13/11 (`52bc501`).
+  (`docs/resultados/confirmacao-pedido-bedrock.log`). Em produção em SP desde 13/11.
 - Ohio ainda roda `37791f6`, sem a reconciliação: para atualizar, publicar `bc328c5` no ECR de Ohio, `TAG=... s4-tasks.sh`
   e rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
 - Auditoria: `infra/terraform/audit.tf` (CloudTrail multirregião criado pelo Terraform de SP — não criar outro em Ohio,
@@ -139,7 +141,7 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 - Demandas técnicas do plano até 20/11 concluídas em 13/11; falta a apresentação (slides e ensaio da demo). Ensaio:
   `docs/roteiro-ensaio.md` (gera em `docs/resultados/ensaio-*` as evidências em SP de substituição de task, perda e
   drenagem de instância e persistência; scripts novos `ops/teste-task.sh` e `ops/teste-persistencia.sh`). Antes de
-  apresentar: `terraform apply` com `-var image_tag=52bc501` (religa SP), esperar a frota voltar a 3 instâncias, e
+  apresentar: `terraform apply -var-file=envs/sa-east-1.tfvars` (religa SP; código igual = sem build), esperar a frota voltar a 3 instâncias, e
   `ops/pausar.sh sa-east-1` depois. O RDS parado religa sozinho após 7 dias (20/11 fica no limite: confira antes).
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.

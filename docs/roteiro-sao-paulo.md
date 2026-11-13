@@ -1,5 +1,9 @@
 # Roteiro: deploy da reconciliação e teste de carga em São Paulo
 
+> **Desatualizado em parte (13/11):** o Terraform agora constrói as imagens sozinho (CodeBuild) e cria tudo num único
+> `terraform apply -var-file=envs/sa-east-1.tfvars`; os passos 1 (push) e 4 (duas fases) abaixo não são mais necessários.
+> Ver `infra/terraform/README.md`. A carga (5), o relatório (6) e a reconciliação (7) continuam valendo.
+
 Objetivo da sessão (~2 h com o ambiente ligado):
 1. levar o código novo (reconciliação de pedidos, migração 0002, alarme `pedidos-travados`) para sa-east-1;
 2. medir a elasticidade **em São Paulo** com carga em degraus e gerar o relatório quantitativo (rubrica 5, A+);

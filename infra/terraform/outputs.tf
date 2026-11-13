@@ -32,6 +32,11 @@ output "rds_endpoint" {
   value = aws_db_instance.db.address
 }
 
+output "image_tag" {
+  description = "Tag das imagens em uso (hash do código quando construídas pelo CodeBuild)"
+  value       = local.image_tag
+}
+
 output "proximo_passo" {
-  value = var.deploy_app ? "Aplicação implantada (imagem ${var.image_tag})." : "Publique as imagens (./push.sh ${var.region} ${local.conta}) e rode: terraform apply -var deploy_app=true -var image_tag=<tag>"
+  value = var.deploy_app ? "Aplicação implantada (imagem ${local.image_tag}): abra o endereço em url." : "Só a infraestrutura foi criada; rode terraform apply sem -var deploy_app=false para subir a aplicação."
 }

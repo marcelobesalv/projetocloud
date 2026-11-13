@@ -27,3 +27,22 @@ As duas fases criaram 145 + 14 = **159 recursos, exatamente os 159 removidos** p
 | Alarmes | 23 criados, nenhum em ALARM |
 
 Ambiente pausado em seguida (`ops/pausar.sh sa-east-1`).
+
+# Um único `terraform apply` do zero — 13/11/2026 (tarde)
+
+Depois da entrega do enunciado do vídeo ("ao executar o código ele deve criar a infraestrutura completa, sem nenhuma
+intervenção manual"), o build das imagens passou para dentro do Terraform (`infra/terraform/build.tf`: código no S3 →
+CodeBuild → ECR da região) e as duas fases viraram um apply só.
+
+| Etapa | Comando | Resultado | Duração |
+|---|---|---|---|
+| Destroy | `terraform destroy -var-file=envs/sa-east-1.tfvars` | 164 recursos; state vazio (0) | 4 min (18:43–18:47 UTC) |
+| **Apply único** | `terraform apply -var-file=envs/sa-east-1.tfvars` | **173 recursos**, imagens `4efa7a282ee1` construídas pelo CodeBuild, migração `exitCode=0`, seed com 33 produtos | **9 min** (18:47–18:56 UTC) |
+| Aplicação | `ops/demo.py` na URL nova `https://d29glptl5pxvls.cloudfront.net/` | pedido criado no "Fechado!" e CONFIRMADO (`demo-apply-unico.log`) | — |
+
+Problemas encontrados no caminho e corrigidos no código:
+- **Propagação do IAM**: o CodeBuild e a task de migração rodam segundos depois de as roles/políticas serem criadas; a
+  primeira tentativa falha com "not authorized". `scripts/build-imagens.sh` e `scripts/run-migrate.sh` repetem esse
+  caso (e só esse) com espera — no apply final cada um precisou de uma segunda tentativa.
+- **Queda de rede local no meio de um destroy**: o Terraform gravou `errored.tfstate`; recuperado com
+  `terraform force-unlock` (a trava era do próprio destroy interrompido) e `terraform state push errored.tfstate`.

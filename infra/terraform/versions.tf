@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.7" # ephemeral random_password
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.7" # código dos serviços para o CodeBuild (build.tf)
+    }
   }
 }
 

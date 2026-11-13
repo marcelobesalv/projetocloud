@@ -53,13 +53,13 @@ variable "db_password_version" {
 }
 
 variable "deploy_app" {
-  description = "Fase 2: cria task definitions, roda a migração e sobe os serviços. Deixe false até as imagens estarem no ECR."
+  description = "Cria task definitions, roda a migração e sobe os serviços. false = só a infraestrutura (rede, dados, ECR...)."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "image_tag" {
-  description = "Tag das imagens no ECR (commit curto publicado pelo push.sh)"
+  description = "Vazio (padrão): as imagens são construídas pelo CodeBuild com a tag = hash do código. Preencha só para usar imagens já publicadas (ex.: push.sh)."
   type        = string
   default     = ""
 

@@ -1,4 +1,5 @@
-# Fase 2 (deploy_app = true): task definitions, migração, serviços e auto scaling das tasks.
+# Aplicação (deploy_app = true, o padrão): task definitions, migração, serviços e auto scaling das tasks.
+# As imagens vêm do build.tf (CodeBuild) com a tag local.image_tag.
 
 locals {
   app      = var.deploy_app ? var.services : {}
@@ -67,7 +68,7 @@ resource "aws_ecs_task_definition" "svc" {
 
   container_definitions = jsonencode([{
     name              = each.key
-    image             = "${aws_ecr_repository.repo[each.key].repository_url}:${var.image_tag}"
+    image             = "${aws_ecr_repository.repo[each.key].repository_url}:${local.image_tag}"
     essential         = true
     cpu               = each.value.cpu
     memoryReservation = each.value.mem_reserva
@@ -89,7 +90,7 @@ resource "aws_ecs_task_definition" "migrate" {
   execution_role_arn       = aws_iam_role.execution.arn
   container_definitions = jsonencode([{
     name        = "migrate"
-    image       = "${aws_ecr_repository.repo["db-migrate"].repository_url}:${var.image_tag}"
+    image       = "${aws_ecr_repository.repo["db-migrate"].repository_url}:${local.image_tag}"
     essential   = true
     cpu         = 256
     memory      = 256
@@ -102,12 +103,6 @@ resource "aws_ecs_task_definition" "migrate" {
     ]
     logConfiguration = local.logs["migrate"]
   }])
-  lifecycle {
-    precondition {
-      condition     = var.image_tag != ""
-      error_message = "deploy_app = true exige image_tag (ex.: -var image_tag=37791f6)."
-    }
-  }
 }
 
 # Roda a migração a cada nova revisão da task definition (= nova imagem), antes dos serviços.
@@ -118,6 +113,7 @@ resource "terraform_data" "migrate" {
     command = "${path.module}/scripts/run-migrate.sh ${var.region} ${aws_ecs_cluster.main.name} ${aws_ecs_task_definition.migrate[0].arn} ${aws_ecs_capacity_provider.cp.name}"
   }
   depends_on = [
+    terraform_data.imagens, # imagens no ECR antes da migração e dos serviços
     aws_ecs_cluster_capacity_providers.main,
     aws_iam_role_policy.execution_secrets,
     aws_secretsmanager_secret_version.db,
