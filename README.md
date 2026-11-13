@@ -21,6 +21,11 @@ reais** (tool use) para consultar catálogo, estoque e pedidos — nunca inventa
                                    └──────────────────────────────────┘
 ```
 
+Arquitetura na AWS (rede, zonas, borda, capacidade, mensageria, observabilidade e auditoria):
+[`docs/arquitetura.svg`](docs/arquitetura.svg) (PNG para slides: `docs/arquitetura.png`).
+
+![Arquitetura na AWS](docs/arquitetura.svg)
+
 ## Estrutura
 
 ```

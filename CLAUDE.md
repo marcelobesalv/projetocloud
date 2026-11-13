@@ -132,6 +132,8 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 - Auditoria: `infra/terraform/audit.tf` (CloudTrail multirregião criado pelo Terraform de SP — não criar outro em Ohio,
   alarmes `seg-*`, consultas salvas) e `docs/runbook.md`. Alarme novo → acrescentar a seção correspondente no runbook.
   Aplicado em SP em 12/11 (o dashboard com o gráfico de segurança entrou no apply da borda).
-- Plano até a entrega (20/11): diagrama; publicar a imagem nova e fazer destroy + apply do zero em SP.
+- Diagrama: `docs/arquitetura.svg` (fonte, editável) e `docs/arquitetura.png` (gerado do SVG com o Edge headless:
+  `msedge --headless=new --window-size=1600,1100 --screenshot=<png> file:///.../arquitetura.svg`). Mudou a infra → atualize os dois.
+- Plano até a entrega (20/11): publicar a imagem nova e fazer destroy + apply do zero em SP.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.

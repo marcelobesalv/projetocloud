@@ -1,0 +1,222 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#232f3e"/>
+    </marker>
+    <marker id="seta-laranja" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d45b07"/>
+    </marker>
+    <marker id="seta-cinza" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7d8998"/>
+    </marker>
+    <style>
+      .t { font-size: 13px; font-weight: 600; fill: #16191f; }
+      .d { font-size: 11.5px; fill: #3b4552; }
+      .s { font-size: 11px; fill: #5f6b7a; }
+      .lbl { font-size: 12px; font-weight: 600; }
+      .halo { stroke: #ffffff; stroke-width: 4px; stroke-linejoin: round; paint-order: stroke; }
+      .num { font-size: 12px; font-weight: 700; fill: #fff; text-anchor: middle; }
+      .sync { stroke: #232f3e; stroke-width: 2; fill: none; marker-end: url(#seta); }
+      .async { stroke: #d45b07; stroke-width: 2; fill: none; stroke-dasharray: 7 5; marker-end: url(#seta-laranja); }
+      .ctl { stroke: #7d8998; stroke-width: 1.6; fill: none; stroke-dasharray: 2 4; marker-end: url(#seta-cinza); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1100" fill="#ffffff"/>
+  <text x="30" y="40" font-size="22" font-weight="700" fill="#16191f">Setup Pronto — arquitetura na AWS</text>
+  <text x="30" y="64" class="d">Ambiente de São Paulo (sa-east-1), criado inteiro pelo Terraform. Ohio (us-east-2) tem a mesma VPC, ECS, RDS e SQS montados à mão, sem a borda (CloudFront/WAF).</text>
+
+  <!-- Cliente e borda global -->
+  <rect x="30" y="95" width="150" height="50" rx="8" fill="#f2f3f3" stroke="#545b64"/>
+  <text x="105" y="125" class="t" text-anchor="middle">Cliente (navegador)</text>
+  <path d="M180,120 L228,120" class="sync"/>
+  <circle cx="204" cy="106" r="9" fill="#232f3e"/><text x="204" y="110" class="num">1</text>
+
+  <rect x="230" y="80" width="380" height="92" rx="8" fill="#f4effc" stroke="#8c4fff" stroke-width="1.5"/>
+  <text x="245" y="101" class="t">Amazon CloudFront — HTTPS (*.cloudfront.net), sem cache</text>
+  <text x="245" y="121" class="d">AWS WAF (us-east-1): 100 POST /chat e 3.000 requisições</text>
+  <text x="245" y="138" class="d">por IP em 5 min → 429; IP reputation, entradas maliciosas</text>
+  <text x="245" y="155" class="d">conhecidas e regras comuns (OWASP) gerenciadas pela AWS</text>
+  <text x="625" y="101" class="s">serviço global (borda)</text>
+
+  <!-- Região -->
+  <rect x="20" y="195" width="1560" height="690" rx="10" fill="none" stroke="#8c99a6" stroke-width="1.5" stroke-dasharray="8 5"/>
+  <text x="36" y="216" class="lbl" fill="#545b64">Região sa-east-1 (São Paulo)</text>
+
+  <!-- VPC -->
+  <rect x="40" y="235" width="1000" height="640" rx="8" fill="none" stroke="#3f8624" stroke-width="2"/>
+  <text x="56" y="256" class="lbl" fill="#3f8624">VPC 10.30.0.0/16</text>
+
+  <!-- Internet Gateway -->
+  <rect x="470" y="222" width="150" height="26" rx="6" fill="#ffffff" stroke="#3f8624"/>
+  <text x="545" y="240" class="d" text-anchor="middle">Internet Gateway</text>
+  <path d="M545,172 L545,220" class="sync"/>
+  <path d="M545,248 L545,308" class="sync"/>
+  <circle cx="530" cy="285" r="9" fill="#232f3e"/><text x="530" y="289" class="num">2</text>
+  <text x="514" y="289" class="s" text-anchor="end">HTTP + cabeçalho secreto X-Origem-CloudFront</text>
+
+  <!-- Zonas -->
+  <rect x="52" y="262" width="482" height="605" rx="6" fill="none" stroke="#5a6b86" stroke-dasharray="4 4"/>
+  <rect x="546" y="262" width="482" height="605" rx="6" fill="none" stroke="#5a6b86" stroke-dasharray="4 4"/>
+  <text x="62" y="280" class="s">Zona de disponibilidade 1</text>
+  <text x="556" y="280" class="s">Zona de disponibilidade 2</text>
+
+  <!-- Camada pública -->
+  <rect x="62" y="290" width="462" height="104" rx="6" fill="#e9f5e1"/>
+  <rect x="556" y="290" width="462" height="104" rx="6" fill="#e9f5e1"/>
+  <text x="72" y="387" class="s">Sub-rede pública 10.30.0.0/24</text>
+  <text x="566" y="387" class="s">Sub-rede pública 10.30.1.0/24</text>
+  <rect x="78" y="310" width="190" height="58" rx="6" fill="#ffffff" stroke="#3f8624"/>
+  <text x="90" y="333" class="t">NAT Gateway</text>
+  <text x="90" y="352" class="d">saída das sub-redes privadas</text>
+  <rect x="300" y="310" width="490" height="58" rx="6" fill="#ffffff" stroke="#8c4fff" stroke-width="1.5"/>
+  <text x="314" y="332" class="t">Application Load Balancer (idle timeout 60 s)</text>
+  <text x="314" y="352" class="d">SG: só a prefix list do CloudFront · sem o cabeçalho → 403</text>
+
+  <!-- Camada de aplicação -->
+  <rect x="62" y="404" width="462" height="306" rx="6" fill="#e6f0fa"/>
+  <rect x="556" y="404" width="462" height="306" rx="6" fill="#e6f0fa"/>
+  <text x="72" y="703" class="s">Sub-rede de aplicação 10.30.10.0/24</text>
+  <text x="566" y="703" class="s">Sub-rede de aplicação 10.30.11.0/24</text>
+
+  <rect x="74" y="418" width="940" height="262" rx="8" fill="none" stroke="#d45b07" stroke-width="1.6" stroke-dasharray="6 4"/>
+
+  <!-- Instância 1 -->
+  <rect x="88" y="446" width="424" height="135" rx="6" fill="#ffffff" stroke="#d45b07"/>
+  <rect x="100" y="474" width="122" height="58" rx="5" fill="#fff3e0" stroke="#ed7100"/>
+  <text x="161" y="497" class="t" text-anchor="middle">chat-api</text>
+  <text x="161" y="515" class="s" text-anchor="middle">LLM + ferramentas</text>
+  <rect x="232" y="474" width="132" height="58" rx="5" fill="#fff3e0" stroke="#ed7100"/>
+  <text x="298" y="497" class="t" text-anchor="middle">commerce-api</text>
+  <text x="298" y="515" class="s" text-anchor="middle">pedidos + outbox</text>
+  <rect x="374" y="474" width="128" height="58" rx="5" fill="#fff3e0" stroke="#ed7100"/>
+  <text x="438" y="497" class="t" text-anchor="middle">order-worker</text>
+  <text x="438" y="515" class="s" text-anchor="middle">reserva de estoque</text>
+  <path d="M161,532 C161,566 298,566 298,534" class="sync"/>
+  <circle cx="186" cy="571" r="9" fill="#232f3e"/><text x="186" y="575" class="num">5</text>
+  <text x="200" y="575" class="s">Service Connect</text>
+
+  <!-- Instância 2 -->
+  <rect x="580" y="446" width="424" height="135" rx="6" fill="#ffffff" stroke="#d45b07"/>
+  <rect x="592" y="474" width="122" height="58" rx="5" fill="#fff3e0" stroke="#ed7100"/>
+  <text x="653" y="497" class="t" text-anchor="middle">chat-api</text>
+  <text x="653" y="515" class="s" text-anchor="middle">LLM + ferramentas</text>
+  <rect x="724" y="474" width="132" height="58" rx="5" fill="#fff3e0" stroke="#ed7100"/>
+  <text x="790" y="497" class="t" text-anchor="middle">commerce-api</text>
+  <text x="790" y="515" class="s" text-anchor="middle">pedidos + outbox</text>
+  <rect x="866" y="474" width="128" height="58" rx="5" fill="#fff3e0" stroke="#ed7100"/>
+  <text x="930" y="497" class="t" text-anchor="middle">order-worker</text>
+  <text x="930" y="515" class="s" text-anchor="middle">reserva de estoque</text>
+  <path d="M653,532 C653,566 790,566 790,534" class="sync"/>
+
+  <text x="592" y="600" class="s">Auto scaling das tasks: chat 2–6 (requisições por task),</text>
+  <text x="592" y="613" class="s">commerce 2–6 (CPU), worker 1–4 (mensagens na fila).</text>
+  <text x="592" y="626" class="s">Health checks: o ECS troca a task que falha no /health; o ASG</text>
+  <text x="592" y="639" class="s">troca a instância não saudável; circuit breaker no deploy.</text>
+  <text x="592" y="652" class="s">Cada task com reserva e limite de CPU e memória; placement:</text>
+  <text x="592" y="665" class="s">espalha entre as zonas, depois binpack por memória.</text>
+
+  <!-- ALB → chat -->
+  <path d="M430,368 L175,472" class="sync"/>
+  <path d="M660,368 L653,472" class="sync"/>
+  <circle cx="300" cy="420" r="9" fill="#232f3e"/><text x="300" y="424" class="num">3</text>
+
+  <!-- rótulos desenhados por cima das setas -->
+  <text x="86" y="436" class="lbl halo" fill="#d45b07">Auto Scaling Group 2–4 × t3.medium · Capacity Provider: managed scaling, alvo 90%, termination protection</text>
+  <text x="100" y="464" class="s halo">Instância EC2 · AMI ECS do SSM · rede bridge, portas dinâmicas</text>
+  <text x="592" y="464" class="s halo">Instância EC2 · AMI ECS do SSM · rede bridge, portas dinâmicas</text>
+
+  <!-- NAT -->
+  <path d="M120,418 L120,370" class="ctl"/>
+
+  <!-- Camada de dados -->
+  <rect x="62" y="720" width="462" height="140" rx="6" fill="#f1eafa"/>
+  <rect x="556" y="720" width="462" height="140" rx="6" fill="#f1eafa"/>
+  <text x="72" y="853" class="s">Sub-rede de dados 10.30.20.0/24</text>
+  <text x="566" y="853" class="s">Sub-rede de dados 10.30.21.0/24</text>
+  <rect x="100" y="738" width="400" height="88" rx="6" fill="#ffffff" stroke="#3b48cc" stroke-width="1.5"/>
+  <text x="114" y="760" class="t">Amazon RDS PostgreSQL 16 (db.t4g.micro, Single-AZ)</text>
+  <text x="114" y="779" class="d">produtos · estoque · pedidos · itens · outbox · conversas</text>
+  <text x="114" y="797" class="d">um usuário de banco por serviço, com GRANTs mínimos</text>
+  <text x="114" y="815" class="d">SG: só as instâncias ECS na porta 5432</text>
+  <text x="787" y="785" class="s" text-anchor="middle" font-style="italic">grupo de sub-redes do RDS (Multi-AZ colocaria a réplica aqui)</text>
+
+  <!-- tasks → RDS -->
+  <path d="M340,532 L340,736" class="sync"/>
+  <circle cx="340" cy="608" r="9" fill="#232f3e"/><text x="340" y="612" class="num">6</text>
+  <path d="M470,532 L470,736" class="sync"/>
+  <circle cx="470" cy="608" r="9" fill="#232f3e"/><text x="470" y="612" class="num">8</text>
+
+  <!-- Serviços regionais -->
+  <rect x="1060" y="235" width="510" height="110" rx="8" fill="#fdecf3" stroke="#e7157b" stroke-width="1.5"/>
+  <text x="1076" y="258" class="t">Amazon SQS — fila orders</text>
+  <text x="1076" y="278" class="d">entrega pelo menos uma vez · visibility 60 s · long polling 20 s</text>
+  <text x="1076" y="297" class="d">o worker é idempotente; a reconciliação do commerce reenvia</text>
+  <text x="1076" y="314" class="d">pedidos parados · mensagem que falha 5 vezes → DLQ orders-dlq</text>
+  <rect x="1440" y="250" width="116" height="34" rx="5" fill="#ffffff" stroke="#e7157b"/>
+  <text x="1498" y="272" class="d" text-anchor="middle">orders-dlq</text>
+
+  <rect x="1060" y="358" width="510" height="64" rx="8" fill="#e6f7f3" stroke="#01a88d" stroke-width="1.5"/>
+  <text x="1076" y="381" class="t">Amazon Bedrock — Claude Haiku 5.5</text>
+  <text x="1076" y="401" class="d">perfil de inferência global · API Converse com tool use</text>
+
+  <rect x="1060" y="435" width="250" height="62" rx="8" fill="#fff4e8" stroke="#ed7100"/>
+  <text x="1074" y="458" class="t">Amazon ECR</text>
+  <text x="1074" y="477" class="d">4 repositórios, tags imutáveis</text>
+  <rect x="1320" y="435" width="250" height="62" rx="8" fill="#fdecee" stroke="#dd344c"/>
+  <text x="1334" y="458" class="t">Secrets Manager</text>
+  <text x="1334" y="477" class="d">senhas dos usuários de banco</text>
+
+  <rect x="1060" y="510" width="510" height="100" rx="8" fill="#fdecf3" stroke="#e7157b" stroke-width="1.5"/>
+  <text x="1076" y="533" class="t">Amazon CloudWatch</text>
+  <text x="1076" y="553" class="d">logs JSON com correlation_id · 15 metric filters (técnicas e de negócio)</text>
+  <text x="1076" y="571" class="d">23 alarmes · dashboard · consultas salvas · Container Insights</text>
+  <text x="1076" y="589" class="d">target tracking das tasks e managed scaling do capacity provider</text>
+
+  <rect x="1060" y="623" width="250" height="48" rx="8" fill="#fdecf3" stroke="#e7157b"/>
+  <text x="1074" y="652" class="t">SNS: setup-pronto-alertas</text>
+  <rect x="1320" y="623" width="250" height="48" rx="8" fill="#fdecee" stroke="#dd344c"/>
+  <text x="1334" y="643" class="t">IAM</text>
+  <text x="1334" y="661" class="s">roles: instância, execução, uma por serviço</text>
+
+  <rect x="1060" y="684" width="510" height="80" rx="8" fill="#fdecf3" stroke="#e7157b" stroke-width="1.5"/>
+  <text x="1076" y="707" class="t">AWS CloudTrail — trilha de todas as regiões</text>
+  <text x="1076" y="727" class="d">S3 privado, criptografado, com validação de integridade</text>
+  <text x="1076" y="745" class="d">+ CloudWatch Logs → 5 alarmes de segurança (IAM, SG, root, trilha, acesso negado)</text>
+
+  <rect x="1060" y="777" width="510" height="48" rx="8" fill="#ffffff" stroke="#3f8624"/>
+  <text x="1074" y="797" class="t">Endpoint de gateway S3 (na VPC)</text>
+  <text x="1074" y="815" class="s">camadas das imagens do ECR sem passar pela NAT</text>
+
+  <rect x="1060" y="838" width="510" height="38" rx="8" fill="#f2f3f3" stroke="#545b64"/>
+  <text x="1074" y="862" class="d">State do Terraform: S3 com KMS, versionado e com trava (lockfile)</text>
+
+  <!-- Aplicação → serviços regionais (saem pela NAT) -->
+  <path d="M1014,470 L1058,300" class="async"/>
+  <circle cx="1036" cy="388" r="9" fill="#d45b07"/><text x="1036" y="392" class="num">7</text>
+  <path d="M1014,500 L1058,392" class="sync"/>
+  <circle cx="1046" cy="452" r="9" fill="#232f3e"/><text x="1046" y="456" class="num">4</text>
+  <path d="M1014,560 L1058,470" class="ctl"/>
+  <path d="M1014,600 L1058,560" class="ctl"/>
+  <path d="M1185,610 L1185,621" class="ctl"/>
+
+  <!-- Legenda -->
+  <text x="30" y="918" class="lbl" fill="#16191f">Legenda</text>
+  <path d="M30,940 L90,940" class="sync"/><text x="100" y="944" class="d">chamada síncrona</text>
+  <path d="M30,964 L90,964" class="async"/><text x="100" y="968" class="d">mensagem assíncrona (SQS)</text>
+  <path d="M30,988 L90,988" class="ctl"/><text x="100" y="992" class="d">suporte: imagens, segredos, logs e métricas (pela NAT)</text>
+  <rect x="30" y="1004" width="60" height="18" fill="#e9f5e1"/><text x="100" y="1017" class="d">sub-redes públicas</text>
+  <rect x="30" y="1028" width="60" height="18" fill="#e6f0fa"/><text x="100" y="1041" class="d">sub-redes privadas de aplicação</text>
+  <rect x="30" y="1052" width="60" height="18" fill="#f1eafa"/><text x="100" y="1065" class="d">sub-redes privadas de dados</text>
+
+  <!-- Fluxo -->
+  <text x="430" y="918" class="lbl" fill="#16191f">Fluxo de um pedido</text>
+  <text x="430" y="942" class="d">1. O cliente conversa por HTTPS no CloudFront; o WAF limita por IP e filtra ataques comuns.</text>
+  <text x="430" y="962" class="d">2. O CloudFront repassa ao ALB com o cabeçalho secreto; o ALB não aceita ninguém além dele.</text>
+  <text x="430" y="982" class="d">3. O ALB entrega a uma task do chat-api saudável.</text>
+  <text x="430" y="1002" class="d">4. O chat-api conversa com o Claude no Bedrock; produto, preço, estoque e desconto vêm só das ferramentas.</text>
+  <text x="430" y="1022" class="d">5. As ferramentas chamam o commerce-api pelo Service Connect (catálogo, compatibilidade, kit, pedido idempotente).</text>
+  <text x="430" y="1042" class="d">6. O commerce grava pedido, itens e evento do outbox na mesma transação no RDS.</text>
+  <text x="430" y="1062" class="d">7. O publicador do outbox envia o evento à fila orders; o order-worker consome com long polling.</text>
+  <text x="430" y="1082" class="d">8. O worker reserva o estoque tudo-ou-nada e marca o pedido CONFIRMADO ou REJEITADO; o chat consulta o status.</text>
+</svg>
