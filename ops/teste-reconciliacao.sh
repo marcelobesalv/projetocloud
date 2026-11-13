@@ -28,15 +28,15 @@ aws ecs update-service --cluster $C --service order-worker --desired-count 0 --q
 aws ecs wait services-stable --cluster $C --services order-worker
 
 echo "== $(date -u +%T) 2. pedido pelo chat"
-python3 demo.py "$URL" | tee /tmp/demo-reconc.log | tail -n 8
+$PY demo.py "$URL" | tee /tmp/demo-reconc.log | tail -n 8
 CONV=$(awk '/^conversa/{print $2}' /tmp/demo-reconc.log)
 sleep 5
 EV=$(aws logs filter-log-events --log-group-name "$LG/commerce-api" --start-time $INICIO \
   --filter-pattern '{ $.event = "order_created" }' --query 'events[].message' --output text \
   | tr '\t' '\n' | grep order_created | tail -n 1)  # a CLI pagina e aplica o --query por página
 [ -z "$EV" ] && { echo "nenhum pedido criado (veja a conversa acima)"; exit 1; }
-PEDIDO=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["pedido_id"])' "$EV")
-CID=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("correlation_id") or "")' "$EV")
+PEDIDO=$($PY -c 'import json,sys; print(json.loads(sys.argv[1])["pedido_id"])' "$EV")
+CID=$($PY -c 'import json,sys; print(json.loads(sys.argv[1]).get("correlation_id") or "")' "$EV")
 echo "pedido $PEDIDO (correlation_id $CID), conversa $CONV"
 
 echo "== $(date -u +%T) 3. fila antes da purga: $(aws sqs get-queue-attributes --queue-url "$Q_URL" \
@@ -62,7 +62,7 @@ for i in $(seq 20); do
 done
 
 echo "== status pelo chat"
-python3 - "$URL" "$CONV" <<'PY'
+$PY - "$URL" "$CONV" <<'PY'
 import json, sys, urllib.request
 req = urllib.request.Request(f"{sys.argv[1]}/chat", json.dumps({"conversation_id": sys.argv[2],
       "message": "Qual o status do pedido?"}).encode(), {"Content-Type": "application/json"})

@@ -136,7 +136,9 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
   Aplicado em SP em 12/11 (o dashboard com o gráfico de segurança entrou no apply da borda).
 - Diagrama: `docs/arquitetura.svg` (fonte, editável) e `docs/arquitetura.png` (gerado do SVG com o Edge headless:
   `msedge --headless=new --window-size=1600,1100 --screenshot=<png> file:///.../arquitetura.svg`). Mudou a infra → atualize os dois.
-- Demandas técnicas do plano até 20/11 concluídas em 13/11; falta a apresentação (slides e ensaio da demo). Antes de
+- Demandas técnicas do plano até 20/11 concluídas em 13/11; falta a apresentação (slides e ensaio da demo). Ensaio:
+  `docs/roteiro-ensaio.md` (gera em `docs/resultados/ensaio-*` as evidências em SP de substituição de task, perda e
+  drenagem de instância e persistência; scripts novos `ops/teste-task.sh` e `ops/teste-persistencia.sh`). Antes de
   apresentar: `terraform apply` com `-var image_tag=52bc501` (religa SP), esperar a frota voltar a 3 instâncias, e
   `ops/pausar.sh sa-east-1` depois. O RDS parado religa sozinho após 7 dias (20/11 fica no limite: confira antes).
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).

@@ -41,6 +41,7 @@ docs/etapa-manual-ohio/      etapa manual: scripts da AWS CLI usados em Ohio (us
 ops/                         operação e testes: status, carga em degraus, relatório do CloudWatch, demo, perda de
                              instância, drenagem, DLQ, teste da reconciliação, pausar/retomar
 docs/roteiro-sao-paulo.md    passo a passo: deploy da versão nova, carga em degraus e relatório em sa-east-1
+docs/roteiro-ensaio.md       ensaio e demonstração final: cada item exigido pelo enunciado, com o comando e o esperado
 docs/runbook.md              resposta a incidentes: o que fazer em cada alarme, consultas salvas, modelo de registro
 docs/resultados/             resultados dos testes na AWS (carga, reconciliação)
 ```

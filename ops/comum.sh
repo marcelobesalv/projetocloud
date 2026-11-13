@@ -1,6 +1,8 @@
 # Variáveis comuns dos scripts de operação. Uso: source ops/comum.sh [regiao]
 # AWS_REGION tem precedência sobre AWS_DEFAULT_REGION na CLI (e o CloudShell já define AWS_REGION): exportar os dois
 export MSYS_NO_PATHCONV=1 # no Git Bash do Windows, impede que /ecs/... vire C:/Program Files/Git/ecs/...
+# No Windows, "python3" costuma ser o atalho da Microsoft Store (não executa nada): os scripts usam $PY.
+if python3 -c '' >/dev/null 2>&1; then export PY=python3; else export PY=python; fi
 export AWS_REGION=${1:-${AWS_REGION:-sa-east-1}} AWS_DEFAULT_REGION=${1:-${AWS_REGION:-sa-east-1}}
 export P=setup-pronto C=setup-pronto-cluster ASG=setup-pronto-ecs-asg
 export ALB_DNS=$(aws elbv2 describe-load-balancers --names $P-alb --query 'LoadBalancers[0].DNSName' --output text)
