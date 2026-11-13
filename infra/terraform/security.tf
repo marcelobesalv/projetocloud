@@ -19,13 +19,7 @@ resource "aws_security_group" "rds" {
   tags        = { Name = "${local.p}-rds-sg" }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "alb_http" {
-  security_group_id = aws_security_group.alb.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "tcp"
-  from_port         = 80
-  to_port           = 80
-}
+# Entrada do ALB: só o CloudFront (aws_vpc_security_group_ingress_rule.alb_cloudfront, em edge.tf).
 
 # Rede bridge: o ALB fala com as portas dinâmicas das instâncias.
 resource "aws_vpc_security_group_ingress_rule" "ecs_from_alb" {

@@ -11,4 +11,4 @@ for q in "$Q_URL" "$DLQ_URL"; do
   aws sqs get-queue-attributes --queue-url "$q" --attribute-names ApproximateNumberOfMessages --query Attributes.ApproximateNumberOfMessages --output text | sed "s|^|${q##*/}: |"
 done
 aws cloudwatch describe-alarms --alarm-name-prefix $P --state-value ALARM --query 'MetricAlarms[].AlarmName' --output text | sed 's/^/ALARM: /'
-curl -s -m 5 "http://$ALB_DNS/health"; echo
+curl -s -m 5 "$URL/health"; echo

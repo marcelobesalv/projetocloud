@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Perda de instância: encerra uma instância do cluster (como se tivesse falhado) e acompanha a recuperação.
-# Rode a carga em paralelo para medir disponibilidade:  python3 ops/carga.py http://$ALB_DNS 600 6 > carga.log &
+# Rode a carga em paralelo para medir disponibilidade:  python3 ops/carga.py $URL 600 6 > carga.log &
 # Uso: ops/teste-instancia.sh [regiao]
 set -euo pipefail
 source "$(dirname "$0")/comum.sh" "${1:-}"

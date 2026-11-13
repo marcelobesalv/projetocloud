@@ -100,6 +100,10 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
   Cópia de trabalho antiga do Terraform em `~/tf` no CloudShell de sa-east-1: **dar pull antes de aplicar de lá**.
   O apply de 12/11 foi feito de um Windows com a AWS CLI (SSO) e o Terraform num container `amazon/aws-cli` + Terraform
   1.11.4 (o `run-migrate.sh` precisa de bash e python3).
+- **Borda de São Paulo** (`edge.tf`, desde 12/11): o endereço público é o CloudFront `https://d1vdbvxqh2yu45.cloudfront.net/`
+  (WAF em us-east-1: 100 `POST /chat` e 3.000 requisições por IP em 5 min → 429). O ALB **não** aceita acesso direto
+  (SG só com a prefix list do CloudFront + listener exigindo `X-Origem-CloudFront`). `ops/comum.sh` exporta `URL` (CloudFront
+  da região ou, em Ohio, o ALB); scripts e cargas devem usar `$URL`.
 - Testes em São Paulo (04/11): perda abrupta da instância mais carregada → ASG repõe em ~1 min, ~1% de 502 por ~10 s;
   drenagem planejada sem erros. Resultados no doc "Setup Pronto — roteiro da apresentação".
 - Testes em São Paulo (12/11), resultados em `docs/resultados/` (`relatorio-sp.{md,html,csv}`, `carga-sp.log`,
@@ -122,14 +126,13 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
 ## O que ainda falta
 - O Haiku às vezes pede confirmação antes de `criar_pedido`; decidir se o prompt deve aceitar "Fechado! Pode fazer o
   pedido" como confirmação suficiente.
-- Sem autenticação nem rate limiting no `POST /chat`; o histórico em `conversas.mensagens` cresce sem limite.
+- Sem autenticação no `POST /chat` (o WAF limita por IP); o histórico em `conversas.mensagens` cresce sem limite.
 - Ohio ainda roda `37791f6`, sem a reconciliação: para atualizar, publicar `bc328c5` no ECR de Ohio, `TAG=... s4-tasks.sh`
   e rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
 - Auditoria: `infra/terraform/audit.tf` (CloudTrail multirregião criado pelo Terraform de SP — não criar outro em Ohio,
   alarmes `seg-*`, consultas salvas) e `docs/runbook.md`. Alarme novo → acrescentar a seção correspondente no runbook.
-  Aplicado em SP em 12/11 com `-target` (ambiente pausado): o **dashboard** ainda não tem o gráfico de segurança nem os
-  alarmes `seg-*` — entra no próximo `terraform apply` completo (que também religa o ambiente).
-- Plano até a entrega (20/11): WAF com rate limit no ALB; HTTPS via CloudFront;
-  prompt aceitar "Fechado! Pode fazer o pedido"; limitar `conversas.mensagens`; diagrama; destroy + apply do zero.
+  Aplicado em SP em 12/11 (o dashboard com o gráfico de segurança entrou no apply da borda).
+- Plano até a entrega (20/11): prompt aceitar "Fechado! Pode fazer o pedido"; limitar `conversas.mensagens`; diagrama;
+  destroy + apply do zero.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.

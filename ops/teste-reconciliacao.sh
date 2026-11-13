@@ -28,7 +28,7 @@ aws ecs update-service --cluster $C --service order-worker --desired-count 0 --q
 aws ecs wait services-stable --cluster $C --services order-worker
 
 echo "== $(date -u +%T) 2. pedido pelo chat"
-python3 demo.py "http://$ALB_DNS" | tee /tmp/demo-reconc.log | tail -n 8
+python3 demo.py "$URL" | tee /tmp/demo-reconc.log | tail -n 8
 CONV=$(awk '/^conversa/{print $2}' /tmp/demo-reconc.log)
 sleep 5
 EV=$(aws logs filter-log-events --log-group-name "$LG/commerce-api" --start-time $INICIO \
@@ -62,9 +62,9 @@ for i in $(seq 20); do
 done
 
 echo "== status pelo chat"
-python3 - "$ALB_DNS" "$CONV" <<'PY'
+python3 - "$URL" "$CONV" <<'PY'
 import json, sys, urllib.request
-req = urllib.request.Request(f"http://{sys.argv[1]}/chat", json.dumps({"conversation_id": sys.argv[2],
+req = urllib.request.Request(f"{sys.argv[1]}/chat", json.dumps({"conversation_id": sys.argv[2],
       "message": "Qual o status do pedido?"}).encode(), {"Content-Type": "application/json"})
 print(json.load(urllib.request.urlopen(req, timeout=70))["resposta"][:400])
 PY

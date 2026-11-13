@@ -1,6 +1,11 @@
 output "url" {
-  description = "Endereço público do chat"
-  value       = "http://${aws_lb.main.dns_name}/"
+  description = "Endereço público do chat (CloudFront, HTTPS)"
+  value       = "https://${aws_cloudfront_distribution.main.domain_name}/"
+}
+
+output "alb_dns" {
+  description = "ALB de origem: só responde ao CloudFront (acesso direto dá timeout ou 403)"
+  value       = aws_lb.main.dns_name
 }
 
 output "ecr_registry" {

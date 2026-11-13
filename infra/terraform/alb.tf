@@ -24,12 +24,17 @@ resource "aws_lb_target_group" "chat" {
   }
 }
 
+# Sem o cabeçalho secreto do CloudFront, 403; a regra que encaminha ao chat está em edge.tf.
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.chat.arn
+    type = "fixed-response"
+    fixed_response {
+      content_type = "application/json"
+      status_code  = "403"
+      message_body = jsonencode({ erro = "Acesso direto ao balanceador não é permitido.", codigo = "acesso_direto" })
+    }
   }
 }

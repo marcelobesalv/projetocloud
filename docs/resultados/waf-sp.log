@@ -1,0 +1,10 @@
+01:49:38 início: POST https://d1vdbvxqh2yu45.cloudfront.net/chat com corpo vazio, ~4 req/s
+01:49:46 25 requisições: {422: 25}
+01:49:54 50 requisições: {422: 50}
+01:50:02 75 requisições: {422: 75}
+01:50:10 100 requisições: {422: 100}
+01:50:19 125 requisições: {422: 125}
+01:50:27 150 requisições: {422: 150}
+01:50:35 175 requisições: {422: 175}
+01:50:36 primeiro 429 na requisição 177 (58s): {"codigo":"limite_requisicoes","erro":"Muitas requisições em pouco tempo. Tente de novo em alguns minutos."}
+01:50:42 fim: {422: 176, 429: 21}
