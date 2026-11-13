@@ -149,12 +149,20 @@ def create_app(settings: Settings | None = None, engine=None, provider: LLMProvi
         resultado = run_turn(provider, ToolExecutor(commerce, conv_id), historico, mensagem, settings)
 
         # Turnos que falharam (LLM ou commerce fora) não entram no histórico: o cliente repete a pergunta.
-        if resultado.novas_mensagens and not conversas.anexar(engine, conv_id, resultado.novas_mensagens, versao):
-            return JSONResponse(
-                status_code=409,
-                content={"erro": "A conversa foi atualizada por outra requisição; envie a mensagem de novo.",
-                         "codigo": "conflito_conversa", "conversation_id": conv_id},
-            )
+        if resultado.novas_mensagens:
+            maximo = max(settings.history_stored_max_messages, settings.history_max_messages)
+            gravou, descartadas = conversas.gravar_turno(engine, conv_id, historico, resultado.novas_mensagens,
+                                                         versao, maximo)
+            if not gravou:
+                return JSONResponse(
+                    status_code=409,
+                    content={"erro": "A conversa foi atualizada por outra requisição; envie a mensagem de novo.",
+                             "codigo": "conflito_conversa", "conversation_id": conv_id},
+                )
+            if descartadas:
+                log.info("mensagens antigas da conversa descartadas",
+                         extra={"event": "conversation_trimmed", "conversation_id": conv_id,
+                                "descartadas": descartadas, "mantidas_max": maximo})
 
         log.info("turno concluído", extra={"event": "chat_turn", "conversation_id": conv_id,
                                           "turn_status": resultado.status, "tools": resultado.ferramentas})

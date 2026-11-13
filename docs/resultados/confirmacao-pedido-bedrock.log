@@ -1,0 +1,8 @@
+# 13/11 — prompt novo (regra 5) com o Claude Haiku 5.5 real (Bedrock, us-east-2), compose local.
+# Conversa: equipamento -> "Monta um kit com o Logitech K380 ABNT2 grafite, o Pebble Mouse 2 grafite e o headset
+# Zone Vibe 100 grafite." (calcular_kit, total R$ 889,64) -> mensagem de aceite abaixo.
+A (aceite + nome) #1 | 'Fechado! Pode fazer o pedido no nome de Ana Souza.' -> pedido 2279dd27-ee20-4906-925a-8686ef2e5253 PENDENTE, R$ 889,64
+A (aceite + nome) #2 | 'Fechado! Pode fazer o pedido no nome de Ana Souza.' -> pedido 6a87737b-f02c-4b4b-a376-3b3e9c9c3c1e PENDENTE, R$ 889,64
+A (aceite + nome) #3 | 'Fechado! Pode fazer o pedido no nome de Ana Souza.' -> pedido 4bdf58e2-e6be-4e5f-b9d8-3e12e6d3cae1 PENDENTE, R$ 889,64
+B (aceite sem nome)  | 'Fechado, pode fazer o pedido.' -> "Para registrar o pedido, preciso só do seu nome completo." (sem criar_pedido)
+B (depois o nome)    | 'Ana Souza' -> pedido 78539829-112d-4eb7-963f-e35b938c3dbc PENDENTE, R$ 889,64

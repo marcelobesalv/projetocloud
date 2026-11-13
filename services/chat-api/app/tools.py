@@ -79,7 +79,8 @@ TOOL_SPECS = [
     ),
     _spec(
         "criar_pedido",
-        "Registra o pedido do kit. Só chame depois que o cliente confirmar explicitamente os itens, o total e o nome. "
+        "Registra o pedido do kit. Chame quando o cliente já viu os itens e o total do último calcular_kit, aceitou "
+        "(ex.: 'fechado, pode fazer o pedido') e disse o nome; não peça confirmação de novo. "
         "O preço é recalculado pelo sistema. O pedido nasce PENDENTE e a reserva de estoque é feita em seguida.",
         {
             "cliente_nome": {"type": "string", "description": "Nome do cliente para o pedido"},

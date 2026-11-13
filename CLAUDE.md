@@ -73,7 +73,7 @@ docker compose up -d postgres && docker compose --profile test run --rm tests-co
 No host: `cd services/<svc> && pip install -r requirements.txt -r requirements-dev.txt &&
 TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/postgres pytest`.
 Os testes criam um banco temporário, aplicam as migrações de `db/` (`DB_MIGRATIONS_DIR`) e o apagam no fim.
-Hoje: commerce 27, worker 8, chat 9 testes.
+Hoje: commerce 27, worker 8, chat 10 testes.
 
 Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra: `docs/infra-handoff.md`.
 
@@ -124,15 +124,14 @@ Publicar imagens: `./push.sh <regiao> <conta>` (ou `push.ps1`). Handoff de infra
   um `--force-new-deployment` no chat-api resolve.
 
 ## O que ainda falta
-- O Haiku às vezes pede confirmação antes de `criar_pedido`; decidir se o prompt deve aceitar "Fechado! Pode fazer o
-  pedido" como confirmação suficiente.
-- Sem autenticação no `POST /chat` (o WAF limita por IP); o histórico em `conversas.mensagens` cresce sem limite.
+- Sem autenticação no `POST /chat` (o WAF limita por IP). Histórico gravado limitado a `HISTORY_STORED_MAX_MESSAGES` (200).
+- Prompt (regra 5, 13/11): aceite + nome depois do último `calcular_kit` já é a confirmação; validado com o Haiku real
+  (`docs/resultados/confirmacao-pedido-bedrock.log`). **Imagem com essas mudanças ainda não publicada nem implantada.**
 - Ohio ainda roda `37791f6`, sem a reconciliação: para atualizar, publicar `bc328c5` no ECR de Ohio, `TAG=... s4-tasks.sh`
   e rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
 - Auditoria: `infra/terraform/audit.tf` (CloudTrail multirregião criado pelo Terraform de SP — não criar outro em Ohio,
   alarmes `seg-*`, consultas salvas) e `docs/runbook.md`. Alarme novo → acrescentar a seção correspondente no runbook.
   Aplicado em SP em 12/11 (o dashboard com o gráfico de segurança entrou no apply da borda).
-- Plano até a entrega (20/11): prompt aceitar "Fechado! Pode fazer o pedido"; limitar `conversas.mensagens`; diagrama;
-  destroy + apply do zero.
+- Plano até a entrega (20/11): diagrama; publicar a imagem nova e fazer destroy + apply do zero em SP.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.

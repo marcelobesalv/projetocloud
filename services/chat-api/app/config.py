@@ -27,6 +27,7 @@ class Settings:
     max_tool_iterations: int = 6
     turn_budget_s: float = 50.0  # abaixo do idle timeout padrão do ALB (60 s)
     history_max_messages: int = 40
+    history_stored_max_messages: int = 200  # o que fica gravado em conversas.mensagens (nunca menos que a janela)
     max_message_chars: int = 2000
 
     log_level: str = "INFO"
@@ -56,6 +57,7 @@ class Settings:
             max_tool_iterations=int(e.get("MAX_TOOL_ITERATIONS", "6")),
             turn_budget_s=float(e.get("CHAT_TURN_BUDGET_SECONDS", "50")),
             history_max_messages=int(e.get("HISTORY_MAX_MESSAGES", "40")),
+            history_stored_max_messages=int(e.get("HISTORY_STORED_MAX_MESSAGES", "200")),
             max_message_chars=int(e.get("MAX_MESSAGE_CHARS", "2000")),
             log_level=e.get("LOG_LEVEL", "INFO"),
             port=int(e.get("PORT", "8080")),

@@ -95,6 +95,36 @@ def test_idempotency_key_estavel():
     assert a == b != c
 
 
+def test_historico_gravado_e_limitado(engine):
+    """A conversa gravada não cresce sem limite: acima do máximo ficam só as últimas mensagens, começando
+    num texto do usuário (as respostas e o turno mais recente nunca se perdem)."""
+    import httpx
+    from fastapi.testclient import TestClient
+    from sqlalchemy import text
+
+    from app.commerce_client import CommerceClient
+    from app.config import Settings
+    from app.llm.fake import FakeProvider
+    from app.main import create_app
+
+    s = Settings(llm_provider="fake", max_tool_iterations=4, turn_budget_s=10, history_max_messages=4,
+                 history_stored_max_messages=6)
+    commerce = CommerceClient("http://commerce", 2, transport=httpx.MockTransport(CommerceStub()))
+    with TestClient(create_app(s, engine=engine, provider=FakeProvider(), commerce=commerce)) as client:
+        conv = None
+        for _ in range(3):  # cada turno grava 4 mensagens (pergunta, toolUse, toolResult, resposta)
+            body = client.post("/chat", json={"conversation_id": conv, "message": "Procuro um teclado"}).json()
+            assert body["status"] == "ok"
+            conv = body["conversation_id"]
+
+    with engine.connect() as c:
+        gravadas = c.execute(text("SELECT mensagens FROM conversas WHERE id = CAST(:id AS uuid)"),
+                             {"id": conv}).scalar_one()
+    assert len(gravadas) <= 6
+    assert gravadas[0]["role"] == "user" and "text" in gravadas[0]["content"][0]
+    assert gravadas[-1]["content"][0]["text"] == body["resposta"]
+
+
 def test_janela_nunca_comeca_em_tool_result():
     msgs = [
         {"role": "user", "content": [{"text": "a"}]},

@@ -131,13 +131,13 @@ TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/po
 |---|---|
 | commerce-api (27) | idempotência do POST /orders (repetição, chave com outro conteúdo → 409, 8 requisições concorrentes → 1 pedido), preço recalculado no servidor, compatibilidade (conexão, adaptador/hub, SO, layout, Hz por porta, VESA/tamanho do suporte), desconto progressivo limitado por produto, outbox com fila fora do ar, reconciliação (pedido parado é reenviado uma vez por janela, recente/já processado não, travado para após N reenvios, uma task por vez) |
 | order-worker (8) | confirmação, estoque insuficiente em um item → REJEITADO sem reservar nada, reentrega da mesma mensagem só apaga, entregas duplicadas simultâneas, dois pedidos pela última unidade, erro transitório não apaga, mensagem inválida fica para a DLQ |
-| chat-api (9) | tool use com dados do commerce, correlation_id propagado, commerce fora do ar → resposta fixa e turno não gravado, LLM fora, limite de iterações, janela de histórico, idempotency key estável, BedrockProvider (inference profile, toolConfig, erro → LLMError) |
+| chat-api (10) | tool use com dados do commerce, correlation_id propagado, commerce fora do ar → resposta fixa e turno não gravado, LLM fora, limite de iterações, janela de histórico, histórico gravado limitado, idempotency key estável, BedrockProvider (inference profile, toolConfig, erro → LLMError) |
 
 ### Status da validação
 
 | Item | Status |
 |---|---|
-| Testes automatizados nos containers (commerce 27, worker 8, chat 9) | ✅ passando |
+| Testes automatizados nos containers (commerce 27, worker 8, chat 10) | ✅ passando |
 | `docker compose up --build` no modo fake: build das 4 imagens, job `migrate`, ElasticMQ e health checks | ✅ testado |
 | Roteiro de demonstração completo no modo fake (kit de R$ 889,64 → R$ 986,40, pedido CONFIRMADO pelo worker) | ✅ testado |
 | Modo Bedrock (`docker-compose.bedrock.yml`) com o Claude Haiku 5.5 real | ✅ testado |
@@ -192,6 +192,7 @@ Em todos os serviços: `PORT` (padrão 8080), `LOG_LEVEL` (INFO), `DB_HOST`, `DB
 | `MAX_TOOL_ITERATIONS` | 6 | máximo de chamadas ao LLM por turno |
 | `CHAT_TURN_BUDGET_SECONDS` | 50 | orçamento de tempo por turno (abaixo do idle timeout de 60 s do ALB) |
 | `HISTORY_MAX_MESSAGES` | 40 | mensagens do histórico enviadas ao LLM |
+| `HISTORY_STORED_MAX_MESSAGES` | 200 | máximo de mensagens gravadas em `conversas.mensagens`; acima disso ficam só as mais recentes (evento `conversation_trimmed`) |
 | `MAX_MESSAGE_CHARS` | 2000 | tamanho máximo da mensagem do cliente |
 
 ### commerce-api
