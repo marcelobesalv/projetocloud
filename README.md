@@ -42,6 +42,7 @@ ops/                         operação e testes: status, carga em degraus, rela
                              instância, drenagem, DLQ, teste da reconciliação, pausar/retomar
 docs/roteiro-sao-paulo.md    passo a passo: deploy da versão nova, carga em degraus e relatório em sa-east-1
 docs/roteiro-ensaio.md       ensaio e demonstração final: cada item exigido pelo enunciado, com o comando e o esperado
+docs/roteiro-video.md        vídeo de entrega: as 6 etapas obrigatórias, o que mostrar e dizer, falhas e recuperação de desastres
 docs/runbook.md              resposta a incidentes: o que fazer em cada alarme, consultas salvas, modelo de registro
 docs/resultados/             resultados dos testes na AWS (carga, reconciliação)
 ```

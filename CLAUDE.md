@@ -138,6 +138,9 @@ Imagens: construídas pelo `terraform apply` (CodeBuild); `./push.sh <regiao> <c
   Aplicado em SP em 12/11 (o dashboard com o gráfico de segurança entrou no apply da borda).
 - Diagrama: `docs/arquitetura.svg` (fonte, editável) e `docs/arquitetura.png` (gerado do SVG com o Edge headless:
   `msedge --headless=new --window-size=1600,1100 --screenshot=<png> file:///.../arquitetura.svg`). Mudou a infra → atualize os dois.
+- Entrega final = **vídeo de 10–15 min em 6 etapas fixas** (instruções do professor) + Terraform no GitHub, que precisa
+  criar tudo sem intervenção manual (feito: apply único). Roteiro do vídeo: `docs/roteiro-video.md` (inclui a tabela de
+  falhas/DR e os cuidados para não expor segredos na gravação). **O repositório no GitHub é privado**: liberar ao professor.
 - Demandas técnicas do plano até 20/11 concluídas em 13/11; falta a apresentação (slides e ensaio da demo). Ensaio:
   `docs/roteiro-ensaio.md` (gera em `docs/resultados/ensaio-*` as evidências em SP de substituição de task, perda e
   drenagem de instância e persistência; scripts novos `ops/teste-task.sh` e `ops/teste-persistencia.sh`). Antes de
