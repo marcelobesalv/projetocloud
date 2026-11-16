@@ -3,6 +3,11 @@
 export MSYS_NO_PATHCONV=1 # no Git Bash do Windows, impede que /ecs/... vire C:/Program Files/Git/ecs/...
 # No Windows, "python3" costuma ser o atalho da Microsoft Store (não executa nada): os scripts usam $PY.
 if python3 -c '' >/dev/null 2>&1; then export PY=python3; else export PY=python; fi
+# No Windows a AWS CLI termina as linhas com \r\n: "3\r" != "3" e os laços de espera nunca terminam. Tira o \r.
+if [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
+  aws() { command aws "$@" | tr -d '\r'; return "${PIPESTATUS[0]}"; }
+  export -f aws
+fi
 export AWS_REGION=${1:-${AWS_REGION:-sa-east-1}} AWS_DEFAULT_REGION=${1:-${AWS_REGION:-sa-east-1}}
 export P=setup-pronto C=setup-pronto-cluster ASG=setup-pronto-ecs-asg
 export ALB_DNS=$(aws elbv2 describe-load-balancers --names $P-alb --query 'LoadBalancers[0].DNSName' --output text)

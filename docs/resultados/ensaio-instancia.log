@@ -1,0 +1,37 @@
+região sa-east-1 · https://d29glptl5pxvls.cloudfront.net/
+tasks na instância i-0980a8443aad7c0c5:
+  09c775fdfea046c18788f62623e4e48e
+  724bc832c7f844c695a9321e0b855e23
+  8796533ee60e4d33929930828ccb0400
+  cd4e1f830075492db5f050aea5782551
+== 13:48:15 encerrando i-0980a8443aad7c0c5 (sem passar pelo ASG nem pelo ECS)
+shutting-down
+--- 13:48:37
+chat-api	5	1	4	COMPLETED
+commerce-api	2	1	1	COMPLETED
+order-worker	2	1	1	COMPLETED
+ASG min/desejado/max/instâncias: 2	4	4	4
+instâncias no cluster: 3
+--- 13:49:08
+chat-api	5	3	2	COMPLETED
+commerce-api	2	1	1	COMPLETED
+order-worker	2	2	0	COMPLETED
+ASG min/desejado/max/instâncias: 2	4	4	4
+instâncias no cluster: 3
+--- 13:49:40
+chat-api	5	4	1	COMPLETED
+commerce-api	2	1	1	COMPLETED
+order-worker	2	2	0	COMPLETED
+ASG min/desejado/max/instâncias: 2	4	4	4
+instâncias no cluster: 4
+--- 13:50:12
+chat-api	5	5	0	COMPLETED
+commerce-api	2	2	0	COMPLETED
+order-worker	2	2	0	COMPLETED
+ASG min/desejado/max/instâncias: 2	4	4	4
+instâncias no cluster: 4
+== 13:50:25 recuperado: serviços estáveis e 4/4 instâncias
+2026-11-16T13:49:06.049000+00:00	Successful	Launching a new EC2 instance: i-0a21dd2110cca106c
+2026-11-16T13:49:04.231000+00:00	Successful	Terminating EC2 instance: i-0980a8443aad7c0c5
+2026-11-16T13:36:36.017000+00:00	Successful	Launching a new EC2 instance: i-00663e39a7b5aa5e0
+None

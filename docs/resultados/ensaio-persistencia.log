@@ -1,0 +1,12 @@
+região sa-east-1 · https://d29glptl5pxvls.cloudfront.net/
+== 14:05:56 1. pedido pelo chat
+   conversa 19bee05e-40be-40f2-90c8-7251cab93562 · pedido f3d9627d-4d5b-4e3f-b926-151a5bcc111b
+   histórico antes: 16 falas; última: O pedido f3d9627d-4d5b-4e3f-b926-151a5bcc111b está **CONFIRMADO**, com a reserva de estoque concluída. Não há motivo de 
+== 14:07:24 2. trocando todas as tasks (chat-api, commerce-api, order-worker)
+commerce-api
+order-worker
+chat-api
+   tasks que sobreviveram à troca: 0 (esperado: 0)
+== 14:12:07 3. mesma conversa depois da troca
+   histórico depois: 16 falas; última: O pedido f3d9627d-4d5b-4e3f-b926-151a5bcc111b está **CONFIRMADO**, com a reserva de estoque concluída. Não há motivo de 
+   chat: O status continua **CONFIRMADO** (consultado agora, sem alterações). Não há motivo de rejeição.

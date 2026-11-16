@@ -1,0 +1,46 @@
+== 2026-11-16T13:47:45Z degrau 1/1: 2.0 req/s por 600s
+[14s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 403ms p90 1117ms | chat 0/0 p90 Nonems
+[30s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 133ms p90 264ms | chat 0/0 p90 Nonems
+[45s d1 2.0rps] GET 30 (2xx 20, 5xx 10, erro 0) p50 44ms p90 57ms | chat 0/0 p90 Nonems
+[60s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 42ms p90 64ms | chat 0/0 p90 Nonems
+[75s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 47ms p90 68ms | chat 0/0 p90 Nonems
+[90s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 48ms p90 66ms | chat 0/0 p90 Nonems
+[105s d1 2.0rps] GET 30 (2xx 29, 5xx 1, erro 0) p50 42ms p90 76ms | chat 0/0 p90 Nonems
+[120s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 45ms p90 89ms | chat 0/0 p90 Nonems
+[135s d1 2.0rps] GET 31 (2xx 31, 5xx 0, erro 0) p50 51ms p90 80ms | chat 0/0 p90 Nonems
+[150s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 54ms p90 114ms | chat 0/0 p90 Nonems
+[165s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 49ms p90 97ms | chat 0/0 p90 Nonems
+[180s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 47ms p90 83ms | chat 0/0 p90 Nonems
+[195s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 50ms p90 73ms | chat 0/0 p90 Nonems
+[210s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 89ms p90 128ms | chat 0/0 p90 Nonems
+[225s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 54ms p90 148ms | chat 0/0 p90 Nonems
+[240s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 44ms p90 64ms | chat 0/0 p90 Nonems
+[255s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 48ms p90 114ms | chat 0/0 p90 Nonems
+[270s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 52ms p90 78ms | chat 0/0 p90 Nonems
+[285s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 54ms p90 68ms | chat 0/0 p90 Nonems
+[300s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 42ms p90 68ms | chat 0/0 p90 Nonems
+[315s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 59ms p90 198ms | chat 0/0 p90 Nonems
+[330s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 48ms p90 64ms | chat 0/0 p90 Nonems
+[345s d1 2.0rps] GET 30 (2xx 29, 5xx 1, erro 0) p50 46ms p90 76ms | chat 0/0 p90 Nonems
+[360s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 47ms p90 64ms | chat 0/0 p90 Nonems
+[375s d1 2.0rps] GET 30 (2xx 29, 5xx 1, erro 0) p50 51ms p90 118ms | chat 0/0 p90 Nonems
+[390s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 45ms p90 60ms | chat 0/0 p90 Nonems
+[405s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 48ms p90 68ms | chat 0/0 p90 Nonems
+[420s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 52ms p90 98ms | chat 0/0 p90 Nonems
+[435s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 40ms p90 51ms | chat 0/0 p90 Nonems
+[450s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 38ms p90 55ms | chat 0/0 p90 Nonems
+[465s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 37ms p90 52ms | chat 0/0 p90 Nonems
+[480s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 40ms p90 73ms | chat 0/0 p90 Nonems
+[495s d1 2.0rps] GET 29 (2xx 29, 5xx 0, erro 0) p50 44ms p90 58ms | chat 0/0 p90 Nonems
+[510s d1 2.0rps] GET 31 (2xx 31, 5xx 0, erro 0) p50 50ms p90 89ms | chat 0/0 p90 Nonems
+[525s d1 2.0rps] GET 30 (2xx 28, 5xx 2, erro 0) p50 51ms p90 79ms | chat 0/0 p90 Nonems
+[540s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 50ms p90 117ms | chat 0/0 p90 Nonems
+[555s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 52ms p90 120ms | chat 0/0 p90 Nonems
+[570s d1 2.0rps] GET 30 (2xx 29, 5xx 1, erro 0) p50 48ms p90 74ms | chat 0/0 p90 Nonems
+[585s d1 2.0rps] GET 30 (2xx 30, 5xx 0, erro 0) p50 49ms p90 74ms | chat 0/0 p90 Nonems
+== fim da carga; esperando as requisições em andamento
+[600s d1 2.0rps] GET 29 (2xx 28, 5xx 1, erro 0) p50 47ms p90 70ms | chat 0/0 p90 Nonems
+
+== resumo por degrau
+degrau  alvo_rps  GET  2xx%   5xx  erro  p50_ms  p90_ms  p99_ms
+     1       2.0  1200  98.58    17     0      48      98     849
