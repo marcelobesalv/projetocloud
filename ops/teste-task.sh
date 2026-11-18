@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Substituição de task: para à força uma task (como se tivesse travado) e acompanha o ECS repor, com uma carga leve
-# pelo CloudFront medindo se o cliente percebe. Sem chamadas ao LLM (só GET /).
+# pelo ALB medindo se o cliente percebe. Sem chamadas ao LLM (só GET /).
 # Uso: ops/teste-task.sh [regiao] [servico]        (padrão: chat-api; ~4 min)
 set -euo pipefail
 cd "$(dirname "$0")"

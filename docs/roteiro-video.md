@@ -24,8 +24,6 @@ divisão na última coluna (troquem pelos nomes).
 - [ ] Navegador com zoom de 125–150% (legibilidade), abas abertas na ordem da etapa 4, região **sa-east-1**.
 - [ ] **Segredos fora da tela** (as instruções proíbem expor credenciais):
   - não clicar em "Retrieve secret value" no Secrets Manager;
-  - não abrir a regra do listener do ALB nem as origens da distribuição CloudFront (mostram o valor do cabeçalho
-    `X-Origem-CloudFront`); se aparecer, troque depois: `terraform apply -var-file=envs/sa-east-1.tfvars -replace=random_password.origem`;
   - não mostrar o portal SSO (e-mail), terminal com tokens, nem `~/.aws`.
 - [ ] Depois de gravar: `bash ops/pausar.sh sa-east-1`.
 
@@ -63,7 +61,8 @@ Objetivo declarado nas instruções: mostrar uma oportunidade comercial concreta
 
 ## Etapa 2 — Demonstração real da aplicação (2:00)
 
-Tela: a página do chat na URL do CloudFront (HTTPS). Fazer ao vivo; cortes são permitidos, simulação não.
+Tela: a página do chat na URL do ALB (`terraform output url`, `http://setup-pronto-alb-….sa-east-1.elb.amazonaws.com/`).
+Fazer ao vivo; cortes são permitidos, simulação não.
 
 1. "Tenho um MacBook Air só com USB-C e Bluetooth, uso macOS. Procuro teclado e mouse sem fio." → lista com preço e
    estoque **do catálogo**.
@@ -86,16 +85,14 @@ com o melhor desconto válido, comprado — sem abrir dez abas de especificaçã
 Tela: `docs/arquitetura.png` (fiel ao Terraform). Percorrer o fluxo numerado — as instruções pedem o caminho da
 requisição, a comunicação assíncrona e o armazenamento, com protocolos e dependências:
 
-1. **Cliente → CloudFront** (HTTPS). O **WAF** limita por IP (100 `POST /chat` e 3.000 requisições em 5 min) e
-   aplica regras gerenciadas.
-2. **CloudFront → ALB** (HTTP, com cabeçalho secreto). O ALB fica nas sub-redes públicas das **2 zonas** e só aceita
-   o CloudFront.
-3. **ALB → task do chat-api** (porta dinâmica na instância EC2 privada, health check em `/health`).
-4. **chat-api ↔ Bedrock** (API Converse, HTTPS pela NAT): o LLM pede ferramentas; não tem acesso direto a dados.
-5. **chat-api → commerce-api** (HTTP interno pelo **Service Connect**): catálogo, compatibilidade, cotação, pedido.
-6. **commerce-api → RDS** (PostgreSQL, 5432, sub-rede de dados): pedido + itens + evento de **outbox** na mesma transação.
-7. **Publicador do outbox → SQS** `orders` (assíncrono, pelo menos uma vez); **order-worker** consome com long polling.
-8. **worker → RDS**: reserva o estoque tudo-ou-nada; CONFIRMADO ou REJEITADO. Falhou 5 vezes → **DLQ**.
+1. **Cliente → ALB** (HTTP, porta 80, pela Internet Gateway). O ALB fica nas sub-redes públicas das **2 zonas** e é o
+   único ponto de entrada: instâncias e banco não têm IP público.
+2. **ALB → task do chat-api** (porta dinâmica na instância EC2 privada, health check em `/health`).
+3. **chat-api ↔ Bedrock** (API Converse, HTTPS pela NAT): o LLM pede ferramentas; não tem acesso direto a dados.
+4. **chat-api → commerce-api** (HTTP interno pelo **Service Connect**): catálogo, compatibilidade, cotação, pedido.
+5. **commerce-api → RDS** (PostgreSQL, 5432, sub-rede de dados): pedido + itens + evento de **outbox** na mesma transação.
+6. **Publicador do outbox → SQS** `orders` (assíncrono, pelo menos uma vez); **order-worker** consome com long polling.
+7. **worker → RDS**: reserva o estoque tudo-ou-nada; CONFIRMADO ou REJEITADO. Falhou 5 vezes → **DLQ**.
 
 Pontos do diagrama a nomear: VPC 10.30.0.0/16 em 2 zonas; sub-redes pública/aplicação/dados; ECS sobre EC2 com ASG
 e Capacity Provider; ECR; Secrets Manager; CloudWatch/SNS; IAM; CloudTrail. Dependências: chat depende de commerce e
@@ -111,8 +108,8 @@ Ordem sugerida (~15 s por tela):
 |---|---|
 | VPC → Sub-redes | 6 sub-redes (pública, aplicação, dados × 2 zonas) e os CIDRs |
 | VPC → Tabelas de rotas | pública → Internet Gateway; aplicação → NAT; dados → **sem saída** (só a VPC) |
-| EC2 → Security Groups | ALB: só a prefix list do CloudFront na 80; instâncias: só do SG do ALB (portas dinâmicas) e entre si; RDS: só das instâncias na 5432 |
-| EC2 → Load Balancers / Target Groups | ALB em 2 zonas; target group com alvos `instância:porta dinâmica`, health check `/health`, todos *healthy* (**não abrir a regra do listener**) |
+| EC2 → Security Groups | ALB: 80 aberta à internet (é a porta de entrada); instâncias: só do SG do ALB (portas dinâmicas) e entre si; RDS: só das instâncias na 5432 |
+| EC2 → Load Balancers / Target Groups | ALB em 2 zonas; target group com alvos `instância:porta dinâmica`, health check `/health`, todos *healthy*; listener HTTP:80 encaminhando ao target group |
 | ECS → Cluster → Serviços | 3 serviços, desired/running, estratégia do capacity provider, circuit breaker; aba de auto scaling (política de cada um) |
 | ECS → Tasks / Task definition | reserva e limite de CPU/memória, `secrets` com o **ARN** do segredo (não o valor), log driver do CloudWatch |
 | EC2 → Instâncias / Auto Scaling Groups | instâncias sem IP público nas sub-redes de aplicação; ASG 2–4 com proteção de scale-in |
@@ -123,16 +120,16 @@ Ordem sugerida (~15 s por tela):
 | IAM → Roles | execution role (só lê os 4 segredos), uma role por serviço: chat só o Bedrock, commerce só envia à fila, worker só consome |
 | Secrets Manager | lista dos segredos (sem revelar valores); senha master gerenciada pelo próprio RDS |
 | CloudWatch | dashboard `setup-pronto`; Logs Insights → consulta salva `pedido-por-correlation-id` com o pedido da demo passando pelos 3 serviços; alarmes |
-| (se sobrar tempo) CloudFront + WAF (região global/us-east-1), CloudTrail | HTTPS e regras do WAF; trilha gravando |
+| (se sobrar tempo) CloudTrail | trilha multirregião gravando; alarmes `seg-*` |
 
 ## Etapa 5 — Conceitos, decisões de design e integração (3:30)
 
 Relacionar cada decisão a um requisito e mostrar onde está no código. Sugestão de trechos (abrir no editor, fonte
 grande):
 
-**Rede e comunicação (~50 s)** — `infra/terraform/network.tf` (3 camadas × 2 zonas, rotas), `security.tf` e
-`edge.tf` (SG do ALB pela prefix list do CloudFront; listener com 403 por padrão e regra pelo cabeçalho). Tráfego de
-entrada só pela borda; interno por Service Connect; RDS sem rota para fora. Uma NAT só (custo) e endpoint S3 para as
+**Rede e comunicação (~50 s)** — `infra/terraform/network.tf` (3 camadas × 2 zonas, rotas), `security.tf` (SGs
+encadeados: internet → ALB na 80 → instâncias nas portas dinâmicas → RDS na 5432) e `alb.tf`. Tráfego de entrada só
+pelo ALB; interno por Service Connect; RDS sem rota para fora. Uma NAT só (custo) e endpoint S3 para as
 camadas das imagens.
 
 **Containers e elasticidade (~60 s)** — `build.tf` (imagens construídas pelo CodeBuild, tag = hash do código),
@@ -147,13 +144,13 @@ worker). Retentativas e duplicidade: `Idempotency-Key` do pedido (`services/comm
 DO NOTHING`), worker idempotente e reserva tudo-ou-nada (`order-worker/app/reserva.py`), DLQ após 5 tentativas,
 reconciliação que reenvia pedidos parados. Segurança: um usuário de banco por serviço com GRANTs mínimos
 (`db/bootstrap.py`), IAM por serviço (`iam.tf`), senhas fora do código, das imagens e do state (`secret_string_wo`),
-WAF, CloudTrail com alarmes de segurança.
+CloudTrail com alarmes de segurança.
 
-**Terraform e decisões arquiteturais (~40 s)** — um único `terraform apply` cria os 173 recursos em ~9 min, sem
-passo manual (`docs/resultados/recriacao-sp.md`); state remoto no S3 com trava; parâmetros por região em
+**Terraform e decisões arquiteturais (~40 s)** — um único `terraform apply` cria o ambiente inteiro em ~9 min,
+sem passo manual (`docs/resultados/recriacao-sp.md`); state remoto no S3 com trava; parâmetros por região em
 `envs/sa-east-1.tfvars`; dependências regionais resolvidas na região (AMI pelo SSM, zonas por data source, imagens no
-ECR local; só o WAF do CloudFront em us-east-1, exigência da AWS). Compromissos: custo (Single-AZ, 1 NAT, t3.medium)
-× disponibilidade (ver etapa 6) × segurança (CloudFront → ALB em HTTP por falta de domínio).
+ECR local, endpoints da própria região). Compromissos: custo (Single-AZ, 1 NAT, t3.medium) × disponibilidade (ver
+etapa 6) × segurança (HTTP sem TLS e `POST /chat` sem autenticação nem limite por IP: escopo do MVP).
 
 ## Etapa 6 — Falhas, riscos e recuperação de desastres (2:00)
 
@@ -169,6 +166,7 @@ desastre?"** Base: tabela abaixo (um slide) + o dashboard e o runbook (`docs/run
 | Fila ou worker com problema | pedidos ficam PENDENTE, nada se perde | `fila-atrasada`, `dlq-com-mensagens`, `pedidos-travados` | outbox guarda o evento no banco; a fila retém 4 dias e a DLQ 14; reconciliação reenvia pedidos parados | `ops/dlq.sh reprocessar` depois de corrigir a causa |
 | Bedrock fora ou com throttling | chat responde mensagem fixa; não vende nesse período | `llm-erros`, latência do LLM | perfil global do Bedrock distribui entre regiões; turno falho não é gravado | **proposta**: modelo alternativo de fallback |
 | Deploy ruim / erro humano | versão nova não sobe | circuit breaker, alarmes, CloudTrail (`cloudtrail-mudancas-recentes`) | circuit breaker volta a revisão anterior | state versionado no S3; `terraform apply` da versão anterior |
+| Abuso do `POST /chat` (robô, excesso de requisições) | custo de tokens no Bedrock; tasks ocupadas | métricas `ChatTurns`, `LLMCalls`, `LLMInputTokens` no dashboard; `RequestCount` do ALB | chat-api escala por requisições (até 6 tasks); limites de tamanho de mensagem e de iterações por turno | **proposta**: autenticação do cliente e WAF no ALB com limite por IP |
 | **Região inteira fora** | plataforma fora | tudo em alarme / Health Dashboard | — | **manual**: `terraform apply` em outra região recria tudo em ~10 min (já provado em São Paulo), **mas sem os dados**; **proposta**: cópia automática dos backups do RDS para outra região e domínio próprio com failover de DNS (Route 53) |
 
 **Resposta objetiva (encerramento):** o que temos hoje é **alta disponibilidade dentro da região** — falhas de task e

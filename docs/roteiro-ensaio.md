@@ -10,7 +10,7 @@ Duração do ensaio completo: ~1 h 30 com o ambiente ligado. Na apresentação, 
 
 Onde rodar: Git Bash (Windows) ou CloudShell de sa-east-1, na raiz do repositório, com a AWS CLI autenticada
 (`aws sso login --profile setup-pronto` e `export AWS_PROFILE=setup-pronto`). Os scripts acham sozinhos a URL do
-CloudFront e o Python certo (`ops/comum.sh`).
+ALB e o Python certo (`ops/comum.sh`).
 
 ## 0. Antes (no dia anterior e no dia)
 
@@ -24,7 +24,7 @@ CloudFront e o Python certo (`ops/comum.sh`).
 
 ## 1. MVP funcionando (ao vivo, ~3 min)
 
-Rubrica 1. Na página `https://d29glptl5pxvls.cloudfront.net/` (ou `bash -c 'cd ops && source comum.sh && $PY demo.py $URL'`):
+Rubrica 1. Na página do ALB (`terraform output url`) (ou `bash -c 'cd ops && source comum.sh && $PY demo.py $URL'`):
 o roteiro de 8 frases (busca → compatibilidade → kit de R$ 889,64 → pedido de desconto → mousepad, R$ 986,40 →
 "Fechado! Pode fazer o pedido no nome de Ana Souza." → CONFIRMADO).
 
@@ -99,8 +99,7 @@ Opcional ao vivo (~2 min): `aws ecs update-service --cluster setup-pronto-cluste
 ## 6. Segurança e operação (ao vivo, ~3 min)
 
 Rubrica 6:
-- ALB direto não responde: `curl -m 10 http://$(aws elbv2 describe-load-balancers --names setup-pronto-alb --query 'LoadBalancers[0].DNSName' --output text)/health`;
-- WAF: resultado em `docs/resultados/waf-sp.log` (429 com mensagem em português);
+- instâncias sem IP público e SGs encadeados (internet → ALB → instâncias → RDS);
 - CloudTrail: consulta salva `setup-pronto/cloudtrail-mudancas-recentes` mostrando o que foi feito no ensaio;
 - runbook: escolher um alarme do dashboard e mostrar a seção correspondente em `docs/runbook.md`.
 
@@ -118,8 +117,8 @@ cd infra/terraform && terraform plan -var-file=envs/sa-east-1.tfvars
 nova desde o apply, o plano mostra uma versão nova do launch template — é o parâmetro SSM funcionando.)
 
 Portabilidade: `grep -rn us-east-2 --include=*.tf --include=*.tfvars --include=*.hcl infra/terraform` não encontra
-nada; AMI (parâmetro SSM), zonas (data source) e imagens (ECR da própria região) são resolvidos em São Paulo. O único
-recurso fora de sa-east-1 é o WAF da borda, que a AWS só oferece em us-east-1 para o CloudFront.
+nada; AMI (parâmetro SSM), zonas (data source) e imagens (ECR da própria região) são resolvidos em São Paulo. Nenhum
+recurso fica fora de sa-east-1 (a trilha do CloudTrail é multirregião, mas criada em São Paulo).
 
 ## 8. Depois
 
@@ -131,7 +130,7 @@ git add docs/resultados && git commit -m "Evidências do ensaio em São Paulo"
 ## Pontos para defender nos slides (rubricas A/A+)
 
 - **Custo × disponibilidade**: RDS Single-AZ e uma NAT só (uma zona inteira fora derruba o sistema); com mais
-  orçamento, Multi-AZ e uma NAT por zona. CloudFront → ALB em HTTP porque não há domínio próprio para o certificado.
+  orçamento, Multi-AZ e uma NAT por zona. Entrada em HTTP porque não há domínio próprio para o certificado.
 - **502 residuais**: 3 em 4.622 requisições no scale-out e ~1% por ~10 s numa perda abrupta de instância; a drenagem
   planejada não gera erro.
 - **Dimensionamento**: base de 3 instâncias (2 necessárias ÷ alvo de 90%); tasks com reserva e limite de CPU e

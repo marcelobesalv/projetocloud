@@ -14,7 +14,6 @@ mesmos nas duas regiões, só muda a região. Todo alarme tem o prefixo `setup-p
 | `ops/dlq.sh <regiao> ver\|reprocessar` | terminal | inspecionar e devolver mensagens da DLQ para a fila |
 | `correlation_id` | resposta do `POST /chat`, header `X-Correlation-ID`, `pedidos.correlation_id`, atributo da mensagem SQS | seguir uma conversa/pedido pelos três serviços |
 | Trilha do CloudTrail | S3 `setup-pronto-cloudtrail-<conta>-<regiao>` e log group `/setup-pronto/cloudtrail` | quem fez o quê na conta (todas as regiões) |
-| WAF da borda | console WAF (global/CloudFront) e log group `aws-waf-logs-setup-pronto-<regiao>` **em us-east-1**, consulta salva `setup-pronto/waf-bloqueios-<regiao>` (também em us-east-1) | quem foi bloqueado, por qual regra |
 
 Consultas salvas (Logs Insights):
 
@@ -167,28 +166,6 @@ professor/responsável pela conta.
 apagar rastro: tratar como S1 e conferir a integridade com
 `aws cloudtrail validate-logs --trail-arn <arn> --start-time <início>`.
 
-### Borda (CloudFront + WAF)
-
-Não há alarme para o WAF (as métricas dele ficam em us-east-1, e o tópico de alertas é regional); os sintomas chegam
-por relato de cliente ou pelos alarmes do ALB.
-
-**Cliente recebe 429 com `"codigo": "limite_requisicoes"`** — o WAF bloqueou o IP: mais de 100 `POST /chat` (regra
-`limite-chat`) ou 3.000 requisições (`limite-geral`) em 5 min. Ver `waf-bloqueios-<regiao>` (us-east-1). O bloqueio
-some sozinho quando a taxa cai. Se for tráfego legítimo (vários usuários atrás do mesmo NAT, teste de carga), subir
-`waf_limite_chat`/`waf_limite_geral` no Terraform. Testado em 12/11: 429 a partir da 177ª requisição em ~1 min (o WAF
-avalia a taxa com alguns segundos de atraso).
-
-**Cliente recebe 403 do WAF** (página padrão, sem o JSON acima) — uma regra gerenciada bloqueou a requisição
-(`terminatingRuleId` no log diz qual). Falso positivo comum: corpo grande ou com trechos parecidos com XSS no
-`AWSManagedRulesCommonRuleSet`; se confirmado, sobrescrever só aquela regra para `count` no `edge.tf`.
-
-**Cliente recebe 403 `"codigo": "acesso_direto"`** — chegou ao ALB sem o cabeçalho do CloudFront (só acontece se o SG
-for aberto). Se ocorrer depois de trocar o segredo (`terraform apply -replace=random_password.origem`), é a distribuição
-ainda propagando: espere alguns minutos.
-
-**504 do CloudFront** — a origem demorou mais de 60 s (`origin_read_timeout`); o turno do chat tem orçamento de 50 s,
-então é o ALB/tasks sem responder: tratar como `chat-sem-hosts-saudaveis`.
-
 ## 4. Cenários já exercitados
 
 | Cenário | Como provocar | Resultado medido |
@@ -200,8 +177,6 @@ então é o ALB/tasks sem responder: tratar como `chat-sem-hosts-saudaveis`.
 | Mensagem inválida | enviar JSON quebrado na fila | DLQ após 5 recebimentos, alarme `dlq-com-mensagens` (Ohio) |
 | Mensagem de pedido perdida | `ops/teste-reconciliacao.sh` | reenvio em ~10 min, pedido CONFIRMADO, mesmo `correlation_id` (SP, 12/11) |
 | Carga em degraus | `ops/carga.py --degraus` + `ops/metricas.py` | 2→6 tasks, 3→4 instâncias, 99,935% (SP, 12/11; `docs/resultados/relatorio-sp.md`) |
-| Acesso direto ao ALB | `curl http://<dns do ALB>/health` | sem resposta: o SG só aceita o CloudFront (SP, 12/11) |
-| Excesso de `POST /chat` | ~200 requisições inválidas em 1 min | 429 a partir da 177ª; 21 bloqueios nos logs do WAF (SP, 12/11; `docs/resultados/waf-sp.log`) |
 
 ## 5. Registro do incidente (modelo)
 

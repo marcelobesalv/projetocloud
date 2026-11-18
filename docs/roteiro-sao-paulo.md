@@ -95,13 +95,12 @@ Plano: a política do chat-api é **30 req/min por task** (0,5 req/s por task), 
 | 4 | 0,5 req/s | 20 min | scale-in: o target tracking reduz tasks após ~15 min abaixo do alvo; depois o capacity provider remove a instância vazia |
 
 ```powershell
-python ops/carga.py https://<dominio>.cloudfront.net --degraus 0.5:300,2:600,4:600,0.5:1200 --chat-cada 10 `
+python ops/carga.py http://<dns do ALB> --degraus 0.5:300,2:600,4:600,0.5:1200 --chat-cada 10 `
   --csv docs/resultados/carga-sp-cliente.csv > docs/resultados/carga-sp.log
 ```
 
-A carga passa pelo CloudFront e pelo WAF (`terraform output url`; o ALB não aceita acesso direto). Os limites do WAF
-são por IP: 3.000 requisições e 100 `POST /chat` em 5 min. Este plano fica abaixo (4 req/s × 300 s = 1.200; um turno a
-cada 10 s = 30); para cargas maiores, suba `waf_limite_geral` antes ou o WAF devolve 429.
+A carga vai direto ao ALB (`terraform output url`). (Até 18/11 passava por CloudFront + WAF, removidos; a medição
+de 12/11 em `docs/resultados/` foi feita com eles.)
 
 `--chat-cada 10` faz um turno com o Bedrock a cada 10 s (~270 turnos), para a carga incluir o caminho real
 chat → LLM → commerce. Enquanto roda, no CloudShell: `watch -n 30 ~/ops/status.sh sa-east-1` e o dashboard

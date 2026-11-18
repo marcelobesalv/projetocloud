@@ -24,20 +24,13 @@
 
   <rect width="1600" height="1100" fill="#ffffff"/>
   <text x="30" y="40" font-size="22" font-weight="700" fill="#16191f">Setup Pronto — arquitetura na AWS</text>
-  <text x="30" y="64" class="d">Ambiente de São Paulo (sa-east-1), criado inteiro pelo Terraform. Ohio (us-east-2) tem a mesma VPC, ECS, RDS e SQS montados à mão, sem a borda (CloudFront/WAF).</text>
+  <text x="30" y="64" class="d">Ambiente de São Paulo (sa-east-1), criado inteiro pelo Terraform. Ohio (us-east-2) tem a mesma VPC, ECS, RDS e SQS montados à mão.</text>
 
-  <!-- Cliente e borda global -->
-  <rect x="30" y="95" width="150" height="50" rx="8" fill="#f2f3f3" stroke="#545b64"/>
-  <text x="105" y="125" class="t" text-anchor="middle">Cliente (navegador)</text>
-  <path d="M180,120 L228,120" class="sync"/>
-  <circle cx="204" cy="106" r="9" fill="#232f3e"/><text x="204" y="110" class="num">1</text>
-
-  <rect x="230" y="80" width="380" height="92" rx="8" fill="#f4effc" stroke="#8c4fff" stroke-width="1.5"/>
-  <text x="245" y="101" class="t">Amazon CloudFront — HTTPS (*.cloudfront.net), sem cache</text>
-  <text x="245" y="121" class="d">AWS WAF (us-east-1): 100 POST /chat e 3.000 requisições</text>
-  <text x="245" y="138" class="d">por IP em 5 min → 429; IP reputation, entradas maliciosas</text>
-  <text x="245" y="155" class="d">conhecidas e regras comuns (OWASP) gerenciadas pela AWS</text>
-  <text x="625" y="101" class="s">serviço global (borda)</text>
+  <!-- Cliente -->
+  <rect x="470" y="95" width="150" height="50" rx="8" fill="#f2f3f3" stroke="#545b64"/>
+  <text x="545" y="125" class="t" text-anchor="middle">Cliente (navegador)</text>
+  <circle cx="530" cy="170" r="9" fill="#232f3e"/><text x="530" y="174" class="num">1</text>
+  <text x="514" y="174" class="s" text-anchor="end">HTTP, porta 80 (setup-pronto-alb-….elb.amazonaws.com)</text>
 
   <!-- Região -->
   <rect x="20" y="195" width="1560" height="690" rx="10" fill="none" stroke="#8c99a6" stroke-width="1.5" stroke-dasharray="8 5"/>
@@ -50,10 +43,10 @@
   <!-- Internet Gateway -->
   <rect x="470" y="222" width="150" height="26" rx="6" fill="#ffffff" stroke="#3f8624"/>
   <text x="545" y="240" class="d" text-anchor="middle">Internet Gateway</text>
-  <path d="M545,172 L545,220" class="sync"/>
+  <path d="M545,145 L545,220" class="sync"/>
   <path d="M545,248 L545,308" class="sync"/>
   <circle cx="530" cy="285" r="9" fill="#232f3e"/><text x="530" y="289" class="num">2</text>
-  <text x="514" y="289" class="s" text-anchor="end">HTTP + cabeçalho secreto X-Origem-CloudFront</text>
+  <text x="514" y="289" class="s" text-anchor="end">único ponto de entrada da VPC</text>
 
   <!-- Zonas -->
   <rect x="52" y="262" width="482" height="605" rx="6" fill="none" stroke="#5a6b86" stroke-dasharray="4 4"/>
@@ -71,7 +64,7 @@
   <text x="90" y="352" class="d">saída das sub-redes privadas</text>
   <rect x="300" y="310" width="490" height="58" rx="6" fill="#ffffff" stroke="#8c4fff" stroke-width="1.5"/>
   <text x="314" y="332" class="t">Application Load Balancer (idle timeout 60 s)</text>
-  <text x="314" y="352" class="d">SG: só a prefix list do CloudFront · sem o cabeçalho → 403</text>
+  <text x="314" y="352" class="d">SG: porta 80 da internet · listener HTTP:80 → target group do chat</text>
 
   <!-- Camada de aplicação -->
   <rect x="62" y="404" width="462" height="306" rx="6" fill="#e6f0fa"/>
@@ -211,8 +204,8 @@
 
   <!-- Fluxo -->
   <text x="430" y="918" class="lbl" fill="#16191f">Fluxo de um pedido</text>
-  <text x="430" y="942" class="d">1. O cliente conversa por HTTPS no CloudFront; o WAF limita por IP e filtra ataques comuns.</text>
-  <text x="430" y="962" class="d">2. O CloudFront repassa ao ALB com o cabeçalho secreto; o ALB não aceita ninguém além dele.</text>
+  <text x="430" y="942" class="d">1. O cliente conversa por HTTP (porta 80) com o endereço público do ALB, entrando pela Internet Gateway.</text>
+  <text x="430" y="962" class="d">2. O ALB, nas sub-redes públicas das duas zonas, é a única entrada; instâncias e banco não têm IP público.</text>
   <text x="430" y="982" class="d">3. O ALB entrega a uma task do chat-api saudável.</text>
   <text x="430" y="1002" class="d">4. O chat-api conversa com o Claude no Bedrock; produto, preço, estoque e desconto vêm só das ferramentas.</text>
   <text x="430" y="1022" class="d">5. As ferramentas chamam o commerce-api pelo Service Connect (catálogo, compatibilidade, kit, pedido idempotente).</text>

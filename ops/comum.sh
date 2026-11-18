@@ -11,10 +11,8 @@ fi
 export AWS_REGION=${1:-${AWS_REGION:-sa-east-1}} AWS_DEFAULT_REGION=${1:-${AWS_REGION:-sa-east-1}}
 export P=setup-pronto C=setup-pronto-cluster ASG=setup-pronto-ecs-asg
 export ALB_DNS=$(aws elbv2 describe-load-balancers --names $P-alb --query 'LoadBalancers[0].DNSName' --output text)
-# Endereço público: o CloudFront da região (Terraform, edge.tf; o ALB só aceita o CloudFront) ou, sem ele (etapa manual
-# de Ohio), o próprio ALB.
-CF=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='$P-$AWS_DEFAULT_REGION'].DomainName | [0]" --output text 2>/dev/null)
-if [ -n "$CF" ] && [ "$CF" != None ]; then export URL="https://$CF"; else export URL="http://$ALB_DNS"; fi
+# Endereço público: o próprio ALB (HTTP), nas duas regiões.
+export URL="http://$ALB_DNS"
 export Q_URL=$(aws sqs get-queue-url --queue-name $P-orders --query QueueUrl --output text)
 export DLQ_URL=$(aws sqs get-queue-url --queue-name $P-orders-dlq --query QueueUrl --output text)
 echo "região $AWS_DEFAULT_REGION · $URL/"

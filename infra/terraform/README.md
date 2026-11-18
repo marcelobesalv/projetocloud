@@ -18,7 +18,6 @@ Alvo padrão: **São Paulo (sa-east-1)**, com o Bedrock pelo perfil `global.anth
 | `app.tf` | task definitions, migração (`scripts/run-migrate.sh`), 3 serviços, auto scaling |
 | `observability.tf` | 15 metric filters, alarmes → SNS (fila, DLQ, pedidos travados, ALB, LLM, RDS, tasks abaixo do mínimo, reserva do cluster, capacidade do ASG), dashboard |
 | `audit.tf` | CloudTrail multirregião (S3 privado com validação de integridade + CloudWatch Logs), 6 métricas e 5 alarmes de segurança (padrões CIS), 7 consultas salvas do Logs Insights; o que fazer em cada alarme: `docs/runbook.md` |
-| `edge.tf` | borda: CloudFront (HTTPS `*.cloudfront.net`, sem cache, origem com 60 s de timeout), WAF em us-east-1 (limite por IP no `POST /chat` e geral, IP reputation, known bad inputs, common rule set; logs só dos bloqueios), ALB só para o CloudFront (prefix list no SG + cabeçalho secreto no listener) |
 | `backend.tf`, `envs/`, `bootstrap/` | state remoto no S3 e valores por região |
 
 ## Como aplicar (CloudShell de sa-east-1)
@@ -55,7 +54,7 @@ O bucket do state é o único pré-requisito fora deste módulo: o backend preci
 
 Outra região: copie `envs/sa-east-1.*` para a nova região (bucket do bootstrap, `region`, `vpc_cidr`, perfil do
 Bedrock disponível lá). AMI (parâmetro SSM), zonas (data source), endpoints, ARNs e imagens (construídas no ECR da
-própria região) são obtidos ali; só o WAF da borda fica em us-east-1, porque a AWS só o oferece lá para o CloudFront.
+própria região) são obtidos ali; nenhum recurso fica fora da região do ambiente.
 
 ## Decisões
 - **Um apply só, imagens construídas na AWS** (`build.tf`): o código vai para um bucket S3 da região e um CodeBuild
@@ -66,13 +65,10 @@ própria região) são obtidos ali; só o WAF da borda fica em us-east-1, porque
   Testado do zero em 13/11: 173 recursos em 9 min (`docs/resultados/recriacao-sp.md`).
 - **Propagação do IAM**: CodeBuild e migração rodam segundos depois de as roles serem criadas; os scripts repetem
   apenas a falha "not authorized" da fila/início, com espera.
-- **Borda com CloudFront + WAF** (`edge.tf`): HTTPS sem domínio próprio (certificado `*.cloudfront.net`) e o WAF na
-  frente de tudo. Para ninguém contornar o WAF, o SG do ALB aceita só a prefix list
-  `com.amazonaws.global.cloudfront.origin-facing` e o listener responde 403 a quem não traz o cabeçalho
-  `X-Origem-CloudFront` (valor gerado por `random_password`, fora dos arquivos; fica no state, que é criptografado).
-  Limitações declaradas: o trecho CloudFront → ALB é HTTP (o ALB não tem certificado sem domínio próprio) e o WAF de
-  CloudFront só existe em us-east-1 (provider `aws.us_east_1`, nome com a região do ambiente). Testado em 12/11: demo
-  completa pelo CloudFront, ALB direto sem resposta, HTTP → 301 para HTTPS e o limite do chat devolvendo 429.
+- **Entrada pelo ALB em HTTP** (`alb.tf`, `security.tf`): o ALB nas sub-redes públicas é o único ponto de entrada
+  (SG com a porta 80 aberta à internet); instâncias e banco ficam em sub-redes privadas. Sem domínio próprio não há
+  certificado no ACM, então não há HTTPS. Até 18/11 havia CloudFront + WAF na frente (`edge.tf`, removido para
+  ficar no escopo do enunciado).
 - **Rede `bridge`** com portas dinâmicas: t3.medium tem poucas ENIs, então `awsvpc` limitaria a ~2 tasks por instância.
 - **Bedrock global**: a política do chat tem as 3 declarações da documentação de *global cross-Region inference*
   (perfil na região, modelo na região e o ARN de modelo sem região com `aws:RequestedRegion = unspecified`).

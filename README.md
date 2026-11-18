@@ -56,7 +56,7 @@ do serviço.
 | Etapa | Região | Como foi feita | Endereço |
 |---|---|---|---|
 | Manual | Ohio (us-east-2) | `docs/etapa-manual-ohio/` (AWS CLI no CloudShell) | `http://setup-pronto-alb-562905076.us-east-2.elb.amazonaws.com/` |
-| Terraform | São Paulo (sa-east-1) | `infra/terraform/` (state no S3) | `https://d29glptl5pxvls.cloudfront.net/` (CloudFront + WAF; o ALB só aceita o CloudFront) |
+| Terraform | São Paulo (sa-east-1) | `infra/terraform/` (state no S3) | `terraform output url` (ALB, HTTP) |
 
 Os dois ambientes ficam **pausados** fora das sessões de trabalho, porque custam por hora. Para religar:
 - São Paulo: `terraform apply` com a tag publicada (ver `infra/terraform/README.md`).

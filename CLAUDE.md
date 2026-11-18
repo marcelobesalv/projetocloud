@@ -99,15 +99,16 @@ Imagens: construídas pelo `terraform apply` (CodeBuild); `./push.sh <regiao> <c
   (`setup-pronto-tfstate-202757356229-sa-east-1`, criado por `bootstrap/`). Recriado do zero em 04/11 (115 recursos) e de
   novo em 13/11, já com borda e auditoria: destroy de 159 recursos em 6 min, fase 1 com 145 em 8 min, fase 2 com 14
   em 39 s; e de novo com o apply único: 173 recursos em 9 min a partir do state vazio (`docs/resultados/recriacao-sp.md`).
-  Imagens com tag = hash do código (`4efa7a282ee1`, mesmo código do commit `52bc501`). Scripts do apply repetem só a falha
+  Imagens com tag = hash do código (`f5bc875d8ab6`, código do commit `f40af3d`, implantadas em 16/11). Scripts do apply repetem só a falha
   de propagação do IAM ("not authorized") — necessária em todo apply do zero.
   Cópia de trabalho antiga do Terraform em `~/tf` no CloudShell de sa-east-1: **dar pull antes de aplicar de lá**.
   O apply de 12/11 foi feito de um Windows com a AWS CLI (SSO) e o Terraform num container `amazon/aws-cli` + Terraform
-  1.11.4 (o `run-migrate.sh` precisa de bash e python3).
-- **Borda de São Paulo** (`edge.tf`, desde 12/11): o endereço público é o CloudFront `https://d29glptl5pxvls.cloudfront.net/`
-  (WAF em us-east-1: 100 `POST /chat` e 3.000 requisições por IP em 5 min → 429). O ALB **não** aceita acesso direto
-  (SG só com a prefix list do CloudFront + listener exigindo `X-Origem-CloudFront`). `ops/comum.sh` exporta `URL` (CloudFront
-  da região ou, em Ohio, o ALB); scripts e cargas devem usar `$URL`.
+  1.11.4 (o `run-migrate.sh` precisa de bash e python3). Para applies sem build/migração (só infra), basta
+  `hashicorp/terraform:1.11.4` com `~/.aws` montado, `AWS_PROFILE=setup-pronto` e `TF_DATA_DIR` num volume Docker.
+- **Entrada pelo ALB em HTTP** (desde 18/11): o endereço público é o DNS do ALB (`terraform output url`,
+  `http://setup-pronto-alb-….sa-east-1.elb.amazonaws.com/`), SG com a 80 aberta e listener encaminhando ao chat.
+  CloudFront + WAF (`edge.tf`, 12/11–18/11) foram removidos para ficar no escopo do enunciado; os resultados de 12/11 em
+  `docs/resultados/` foram medidos com eles. `ops/comum.sh` exporta `URL` (o ALB); scripts e cargas devem usar `$URL`.
 - Testes em São Paulo (04/11): perda abrupta da instância mais carregada → ASG repõe em ~1 min, ~1% de 502 por ~10 s;
   drenagem planejada sem erros. Resultados no doc "Setup Pronto — roteiro da apresentação".
 - Testes em São Paulo (12/11), resultados em `docs/resultados/` (`relatorio-sp.{md,html,csv}`, `carga-sp.log`,
@@ -121,21 +122,22 @@ Imagens: construídas pelo `terraform apply` (CodeBuild); `./push.sh <regiao> <c
 - Pausar: `ops/pausar.sh` zera min/max/desejado do ASG e tira a proteção de scale-in (com 0 tasks e 0 instâncias a
   reserva do capacity provider é 100% > 90% e ele subiria uma instância). O RDS parado religa sozinho após 7 dias.
 - No CloudShell, `AWS_REGION` vem definido e tem precedência sobre `AWS_DEFAULT_REGION`: scripts exportam os dois.
-- Os dois ambientes ficam pausados fora das sessões (`ops/pausar.sh`); `ops/retomar.sh` ou `terraform apply` religam.
+- Ohio fica pausado fora das sessões (`ops/pausar.sh`); **São Paulo fica ligado desde 18/11** (decisão do usuário, para o
+  vídeo). `ops/retomar.sh` ou `terraform apply` religam.
 - Operação e testes: `ops/` (status, carga, demo, perda de instância, drenagem, alarmes extras de Ohio).
 - Service Connect: o cliente (chat-api) só enxerga os aliases que já existiam quando a task subiu — por isso o
   `aws_ecs_service.chat` depende do commerce-api. Se o chat responder `commerce_indisponivel` logo após criar os serviços,
   um `--force-new-deployment` no chat-api resolve.
 
 ## O que ainda falta
-- Sem autenticação no `POST /chat` (o WAF limita por IP). Histórico gravado limitado a `HISTORY_STORED_MAX_MESSAGES` (200).
+- Sem autenticação nem limite por IP no `POST /chat` (custo de tokens exposto a abuso; proposta na etapa 6). Histórico gravado limitado a `HISTORY_STORED_MAX_MESSAGES` (200).
 - Prompt (regra 5, 13/11): aceite + nome depois do último `calcular_kit` já é a confirmação; validado com o Haiku real
   (`docs/resultados/confirmacao-pedido-bedrock.log`). Em produção em SP desde 13/11.
 - Ohio ainda roda `37791f6`, sem a reconciliação: para atualizar, publicar `bc328c5` no ECR de Ohio, `TAG=... s4-tasks.sh`
   e rodar de novo `ops/ohio-alarmes-extra.sh` (metric filters e alarme `pedidos-travados`).
 - Auditoria: `infra/terraform/audit.tf` (CloudTrail multirregião criado pelo Terraform de SP — não criar outro em Ohio,
   alarmes `seg-*`, consultas salvas) e `docs/runbook.md`. Alarme novo → acrescentar a seção correspondente no runbook.
-  Aplicado em SP em 12/11 (o dashboard com o gráfico de segurança entrou no apply da borda).
+  Aplicado em SP em 12/11.
 - Diagrama: `docs/arquitetura.svg` (fonte, editável) e `docs/arquitetura.png` (gerado do SVG com o Edge headless:
   `msedge --headless=new --window-size=1600,1100 --screenshot=<png> file:///.../arquitetura.svg`). Mudou a infra → atualize os dois.
 - Entrega final = **vídeo de 10–15 min em 6 etapas fixas** (instruções do professor) + Terraform no GitHub, que precisa
@@ -143,8 +145,7 @@ Imagens: construídas pelo `terraform apply` (CodeBuild); `./push.sh <regiao> <c
   falhas/DR e os cuidados para não expor segredos na gravação). **O repositório no GitHub é privado**: liberar ao professor.
 - Demandas técnicas do plano até 20/11 concluídas em 13/11; falta a apresentação (slides e ensaio da demo). Ensaio:
   `docs/roteiro-ensaio.md` (gera em `docs/resultados/ensaio-*` as evidências em SP de substituição de task, perda e
-  drenagem de instância e persistência; scripts novos `ops/teste-task.sh` e `ops/teste-persistencia.sh`). Antes de
-  apresentar: `terraform apply -var-file=envs/sa-east-1.tfvars` (religa SP; código igual = sem build), esperar a frota voltar a 3 instâncias, e
-  `ops/pausar.sh sa-east-1` depois. O RDS parado religa sozinho após 7 dias (20/11 fica no limite: confira antes).
+  drenagem de instância e persistência; scripts novos `ops/teste-task.sh` e `ops/teste-persistencia.sh`). SP foi
+  religado em 18/11 (`ops/retomar.sh`) e fica ligado; antes de gravar, confira que a frota voltou a 3 instâncias.
 - Sem CI (pytest dos três serviços + build das imagens + `terraform validate` a cada push).
 - Perda abrupta de instância gera ~1% de 502 por alguns segundos; para zerar, avaliar retentativa no cliente/ALB.
