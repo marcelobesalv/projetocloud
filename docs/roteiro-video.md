@@ -64,6 +64,13 @@ Objetivo declarado nas instruções: mostrar uma oportunidade comercial concreta
 Tela: a página do chat na URL do ALB (`terraform output url`, `http://setup-pronto-alb-….sa-east-1.elb.amazonaws.com/`).
 Fazer ao vivo; cortes são permitidos, simulação não.
 
+O que a página mostra e vale apontar (tudo vem do sistema, não do texto do LLM):
+- **vitrine** com o catálogo, preço e estoque reais (`GET /api/vitrine` → commerce-api);
+- embaixo de cada resposta do consultor, as **ferramentas que ele chamou** ("catálogo", "compatibilidade", "cotação do
+  kit", "pedido registrado"): é a prova visual de que a IA consultou e alterou o estado do sistema;
+- o cartão **"Seu kit"** com a cotação do `calcular_kit` (itens, desconto por linha, total e a próxima faixa);
+- o **acompanhamento do pedido** (recebido → reserva de estoque → confirmado), atualizado sozinho a partir do banco.
+
 1. "Tenho um MacBook Air só com USB-C e Bluetooth, uso macOS. Procuro teclado e mouse sem fio." → lista com preço e
    estoque **do catálogo**.
 2. "Esses são compatíveis com meu Mac? Prefiro layout ABNT2." → descarta os que são só US e o mouse com receptor USB-A
@@ -72,10 +79,12 @@ Fazer ao vivo; cortes são permitidos, simulação não.
    3 produtos, 8% → **R$ 889,64**.
 4. "Consegue um desconto maior?" → **não inventa**; oferece a próxima faixa (4 produtos, 10%).
 5. "Então adiciona o mousepad Speed XL preto." → **R$ 986,40**.
-6. "Fechado! Pode fazer o pedido no nome de Ana Souza." → número do pedido, **PENDENTE**.
-7. "Qual o status do pedido?" → **CONFIRMADO** (o worker reservou o estoque pela fila).
-8. **Persistência**: recarregar a página (F5) — a conversa volta inteira, lida do banco (`GET /conversations/{id}`), e
-   o status continua CONFIRMADO. (Opcional, se couber: mostrar o pedido no log da consulta salva da etapa 4.)
+6. "Fechado! Pode fazer o pedido no nome de Ana Souza." → número do pedido, **PENDENTE**; o cartão de
+   acompanhamento aparece e, em poucos segundos, passa sozinho para **CONFIRMADO** (o worker reservou o estoque pela
+   fila). Bom momento para dizer "isto é a comunicação assíncrona acontecendo".
+7. "Qual o status do pedido?" → o consultor confirma pela ferramenta `status_pedido`.
+8. **Persistência**: recarregar a página (F5) — a conversa, o kit e o acompanhamento voltam inteiros, lidos do banco
+   (`GET /conversations/{id}`), e o status continua CONFIRMADO. O estoque do produto na vitrine também caiu. (Opcional, se couber: mostrar o pedido no log da consulta salva da etapa 4.)
 
 Valor para o cliente (uma frase): em dois minutos ele saiu de "o que serve no meu Mac?" para um kit compatível,
 com o melhor desconto válido, comprado — sem abrir dez abas de especificação.

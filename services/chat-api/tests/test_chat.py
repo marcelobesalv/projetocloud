@@ -165,3 +165,90 @@ def test_bedrock_provider_usa_inference_profile_e_tool_config(monkeypatch):
             raise AssertionError("deveria falhar")
         except LLMError as exc:
             assert "ThrottlingException" in str(exc)
+
+
+# --- página da loja: vitrine, acompanhamento do pedido e estado da conversa ---------------------------------------
+
+def test_vitrine_traz_o_catalogo_do_commerce(make_client):
+    client, stub = make_client()
+    r = client.get("/api/vitrine")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["total"] == 1
+    p = body["produtos"][0]
+    assert p["nome"] == "Teclado Stub Bluetooth" and p["preco"] == "R$ 123,45"
+    assert p["estoque"] == 3 and p["layouts"] == ["ABNT2"] and "Bluetooth" in p["destaques"]
+    assert len([q for q in stub.requisicoes if q.url.path == "/products"]) == 6  # uma consulta por categoria
+
+    stub.requisicoes.clear()
+    assert client.get("/api/vitrine", params={"categoria": "teclado"}).json()["total"] == 1
+    assert len(stub.requisicoes) == 1
+    assert client.get("/api/vitrine", params={"categoria": "geladeira"}).status_code == 422
+
+
+def test_vitrine_com_commerce_fora_do_ar(make_client):
+    client, _ = make_client(stub=CommerceStub(fora_do_ar=True))
+    r = client.get("/api/vitrine")
+    assert r.status_code == 503 and r.json()["codigo"] == "commerce_indisponivel"
+
+
+def test_acompanhamento_so_mostra_pedido_da_propria_conversa(make_client):
+    client, stub = make_client()
+    conversa, outra, pid = str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())
+    stub.pedidos[pid] = {"pedido_id": pid, "status": "CONFIRMADO", "conversation_id": conversa,
+                         "cliente_nome": "Ana Souza", "itens": [], "total": "R$ 10,00"}
+
+    r = client.get(f"/api/conversas/{conversa}/pedidos/{pid}")
+    assert r.status_code == 200
+    assert r.json()["status"] == "CONFIRMADO" and "cliente_nome" not in r.json()
+    assert client.get(f"/api/conversas/{outra}/pedidos/{pid}").status_code == 404
+    assert client.get(f"/api/conversas/{conversa}/pedidos/{uuid.uuid4()}").status_code == 404
+
+
+def test_estado_da_conversa_vem_dos_resultados_das_ferramentas():
+    from app.main import _resumo, estado_da_conversa
+
+    kit = {"itens": [{"nome": "K380", "variante": "ABNT2 / Grafite", "quantidade": 1, "preco_unit": "R$ 219,00",
+                      "desconto_pct": 8.0, "total": "R$ 201,48", "estoque_id": 7}],
+           "produtos_diferentes": 3, "desconto_faixa_pct": 8.0, "subtotal": "R$ 967,00", "desconto": "R$ 77,36",
+           "total": "R$ 889,64", "proxima_faixa": {"produtos_diferentes": 4, "desconto_pct": 10.0}}
+    pid = str(uuid.uuid4())
+
+    def uso(i, nome):
+        return {"role": "assistant", "content": [{"toolUse": {"toolUseId": i, "name": nome, "input": {}}}]}
+
+    def res(i, dados, status="success"):
+        return {"role": "user", "content": [{"toolResult": {"toolUseId": i, "content": [{"json": dados}],
+                                                            "status": status}}]}
+
+    msgs = [
+        {"role": "user", "content": [{"text": "Monta o kit"}]},
+        uso("a", "calcular_kit"), res("a", kit),
+        uso("b", "criar_pedido"), res("b", {"pedido_id": pid, "status": "PENDENTE"}),
+        uso("c", "calcular_kit"), res("c", {"erro": "Variante inexistente"}, status="error"),  # erro é ignorado
+        {"role": "assistant", "content": [{"text": "Pedido registrado."}]},
+    ]
+    estado = estado_da_conversa(msgs)
+    assert estado["pedido_id"] == pid
+    assert estado["kit"]["total"] == "R$ 889,64" and estado["kit"]["proxima_faixa"]["desconto_pct"] == 10.0
+    assert "estoque_id" not in estado["kit"]["itens"][0]  # ids internos não vão para a página
+
+    resumo = _resumo(msgs)
+    assert resumo[-1] == {"role": "assistant", "texto": "Pedido registrado.",
+                          "ferramentas": ["calcular_kit", "criar_pedido", "calcular_kit"]}
+    assert estado_da_conversa([]) == {"kit": None, "pedido_id": None}
+
+
+def test_resposta_do_chat_diz_quais_ferramentas_foram_usadas(make_client):
+    client, _ = make_client()
+    body = client.post("/chat", json={"message": "Procuro um teclado"}).json()
+    assert "buscar_produtos" in body["ferramentas"]
+    assert body["kit"] is None and body["pedido_id"] is None
+    hist = client.get(f"/conversations/{body['conversation_id']}").json()
+    assert "buscar_produtos" in hist["mensagens"][-1]["ferramentas"]
+
+
+def test_pagina_da_loja_e_servida(make_client):
+    client, _ = make_client()
+    r = client.get("/")
+    assert r.status_code == 200 and "Setup Pronto" in r.text and "/api/vitrine" in r.text

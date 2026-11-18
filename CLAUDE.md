@@ -12,7 +12,7 @@ Regra de ouro do domínio: **a IA nunca inventa produto, preço, estoque ou desc
 ## Arquitetura
 | Componente | Pasta | Papel |
 |---|---|---|
-| chat-api | `services/chat-api` | Único serviço público (ALB). `GET /` página de chat, `POST /chat`, `GET /conversations/{id}`, `GET /health`. Loop de tool use com o LLM; histórico na tabela `conversas`. |
+| chat-api | `services/chat-api` | Único serviço público (ALB). `GET /` página da loja (vitrine + consultor), `POST /chat` (devolve também `ferramentas`, `kit` e `pedido_id` do turno), `GET /conversations/{id}`, `GET /api/vitrine` (catálogo do commerce), `GET /api/conversas/{cid}/pedidos/{pid}` (acompanhamento; só o pedido da própria conversa), `GET /health`. Loop de tool use com o LLM; histórico na tabela `conversas`. |
 | commerce-api | `services/commerce-api` | Interno. Catálogo (`/products`), estoque (`/stock/{sku}`), compatibilidade (`/compatibility`), cotação de kit (`/kits/quote`), pedidos (`POST /orders` com `Idempotency-Key`, `GET /orders/{id}`). Thread de background publica o outbox no SQS. |
 | order-worker | `services/order-worker` | Consome a fila `orders` (long polling), reserva estoque tudo-ou-nada, marca CONFIRMADO/REJEITADO. Só expõe `/health`. |
 | migrate (job) | `db/` | Cria um usuário de banco por serviço, aplica Alembic, aplica GRANTs mínimos e roda o seed. Idempotente; roda antes de cada deploy. |
@@ -73,7 +73,7 @@ docker compose up -d postgres && docker compose --profile test run --rm tests-co
 No host: `cd services/<svc> && pip install -r requirements.txt -r requirements-dev.txt &&
 TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/postgres pytest`.
 Os testes criam um banco temporário, aplicam as migrações de `db/` (`DB_MIGRATIONS_DIR`) e o apagam no fim.
-Hoje: commerce 27, worker 8, chat 10 testes.
+Hoje: commerce 27, worker 8, chat 16 testes.
 
 Imagens: construídas pelo `terraform apply` (CodeBuild); `./push.sh <regiao> <conta>` só para uso manual com `-var image_tag`. Handoff de infra: `docs/infra-handoff.md`.
 
@@ -99,7 +99,7 @@ Imagens: construídas pelo `terraform apply` (CodeBuild); `./push.sh <regiao> <c
   (`setup-pronto-tfstate-202757356229-sa-east-1`, criado por `bootstrap/`). Recriado do zero em 04/11 (115 recursos) e de
   novo em 13/11, já com borda e auditoria: destroy de 159 recursos em 6 min, fase 1 com 145 em 8 min, fase 2 com 14
   em 39 s; e de novo com o apply único: 173 recursos em 9 min a partir do state vazio (`docs/resultados/recriacao-sp.md`).
-  Imagens com tag = hash do código (`f5bc875d8ab6`, código do commit `f40af3d`, implantadas em 16/11). Scripts do apply repetem só a falha
+  Imagens com tag = hash do código (`819a55f1f9fb`, site novo da loja, implantadas em 18/11 a partir da working tree ainda não commitada). Scripts do apply repetem só a falha
   de propagação do IAM ("not authorized") — necessária em todo apply do zero.
   Cópia de trabalho antiga do Terraform em `~/tf` no CloudShell de sa-east-1: **dar pull antes de aplicar de lá**.
   O apply de 12/11 foi feito de um Windows com a AWS CLI (SSO) e o Terraform num container `amazon/aws-cli` + Terraform

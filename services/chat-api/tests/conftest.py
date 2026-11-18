@@ -60,13 +60,21 @@ class CommerceStub:
     def __init__(self, fora_do_ar=False):
         self.fora_do_ar = fora_do_ar
         self.requisicoes: list[httpx.Request] = []
+        self.pedidos: dict[str, dict] = {}  # GET /orders/{id}
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requisicoes.append(request)
         if self.fora_do_ar:
             raise httpx.ConnectError("connection refused", request=request)
         if request.url.path == "/products":
-            return httpx.Response(200, json={"total": 1, "produtos": [PRODUTO_STUB]})
+            cat = request.url.params.get("categoria")
+            produtos = [PRODUTO_STUB] if cat in (None, PRODUTO_STUB["categoria"]) else []
+            return httpx.Response(200, json={"total": len(produtos), "produtos": produtos})
+        if request.url.path.startswith("/orders/") and request.method == "GET":
+            p = self.pedidos.get(request.url.path.rsplit("/", 1)[1])
+            if p is None:
+                return httpx.Response(404, json={"erro": "Pedido não encontrado.", "codigo": "pedido_nao_encontrado"})
+            return httpx.Response(200, json=p)
         if request.url.path == "/orders" and request.method == "POST":
             body = json.loads(request.content)
             return httpx.Response(201, json={"pedido_id": str(uuid.uuid4()), "status": "PENDENTE",
