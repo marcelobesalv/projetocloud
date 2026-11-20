@@ -19,28 +19,48 @@ Alvo padrão: **São Paulo (sa-east-1)**, com o Bedrock pelo perfil `global.anth
 | `observability.tf` | 15 metric filters, alarmes → SNS (fila, DLQ, pedidos travados, ALB, LLM, RDS, tasks abaixo do mínimo, reserva do cluster, capacidade do ASG), dashboard |
 | `audit.tf` | CloudTrail multirregião (S3 privado com validação de integridade + CloudWatch Logs), 6 métricas e 5 alarmes de segurança (padrões CIS), 7 consultas salvas do Logs Insights; o que fazer em cada alarme: `docs/runbook.md` |
 | `backend.tf`, `envs/`, `bootstrap/` | state remoto no S3 e valores por região |
+| `deploy.sh` | o ambiente inteiro em um comando: bucket do state + init + apply (ou plan/destroy) |
+| `scripts/` | chamados pelo próprio apply: build no CodeBuild (`build-imagens.sh`) e migração (`run-migrate.sh`) |
 
-## Como aplicar (CloudShell de sa-east-1)
+## Pré-requisitos
+- Conta AWS com permissão de administrador (o apply cria IAM, VPC, RDS, CloudTrail…).
+- **Acesso ao Claude Haiku no Bedrock** na conta: em conta que nunca usou modelos da Anthropic, a AWS pode pedir
+  uma vez o formulário de caso de uso (console do Bedrock, página do Claude Haiku 5.5). É um aceite da conta, não
+  um recurso, por isso fica fora do Terraform. Sem ele tudo sobe, mas o chat responde com a mensagem fixa de
+  assistente indisponível.
+- Terraform **≥ 1.11**, AWS CLI v2, `bash` e `python3` (os scripts do apply usam os três). O **CloudShell** já
+  tem AWS CLI, bash e python3; falta só o Terraform (passo 0 abaixo). Docker **não** é necessário: as imagens são
+  construídas na AWS.
+
+## Como aplicar (um comando)
 
 ```bash
-# 0) Terraform >= 1.11 no CloudShell (uma vez por sessão do CloudShell)
+# 0) Só no CloudShell: Terraform >= 1.11 (uma vez por sessão). O home tem 1 GB; os providers ficam em /tmp.
 curl -sLo /tmp/tf.zip https://releases.hashicorp.com/terraform/1.11.4/terraform_1.11.4_linux_amd64.zip
 mkdir -p ~/bin && unzip -o /tmp/tf.zip -d ~/bin
-export PATH=~/bin:$PATH TF_DATA_DIR=/tmp/tfdata   # o home do CloudShell tem só 1 GB; o provider fica em /tmp
+export PATH=~/bin:$PATH TF_DATA_DIR=/tmp/tfdata
 
-# 1) Bucket do state remoto (uma vez por conta/região; state local só deste módulo)
-(cd bootstrap && terraform init && terraform apply -var region=sa-east-1)
-
-# 2) O ambiente inteiro, num único apply (~10 min): rede, RDS, ECR, IAM, cluster, ALB, borda, auditoria e
-#    observabilidade; o CodeBuild constrói e publica as imagens a partir do código (build.tf); depois a migração
-#    (run-task; o apply falha se exitCode ≠ 0), os serviços e o auto scaling.
-terraform init -backend-config=envs/sa-east-1.backend.hcl
-terraform apply -var-file=envs/sa-east-1.tfvars
-terraform output url
-
-# Remover tudo
-terraform destroy -var-file=envs/sa-east-1.tfvars
+# 1) Tudo, sem nenhuma pergunta (~10 min do zero)
+git clone <este repositório> && cd projetocloud/infra/terraform
+./deploy.sh sa-east-1
 ```
+
+O `deploy.sh` (1) cria o bucket do state com o módulo `bootstrap/` se ele ainda não existir, (2) faz o
+`terraform init` apontando para ele — o nome `setup-pronto-tfstate-<conta>-<regiao>` é calculado a partir da conta,
+nada para editar — e (3) roda `terraform apply -auto-approve`. O apply cria rede, RDS, ECR, IAM, cluster, ALB,
+auditoria e observabilidade; o CodeBuild constrói e publica as imagens a partir do código (`build.tf`); depois vêm a
+migração (run-task; o apply falha se o exitCode ≠ 0), os serviços e o auto scaling. No fim ele imprime a URL.
+
+```bash
+./deploy.sh sa-east-1 plan                          # só mostra o que mudaria
+./deploy.sh sa-east-1 apply -var alarm_email=voce@exemplo.com   # alarmes por e-mail (confirme a inscrição do SNS)
+./deploy.sh sa-east-1 destroy                       # remove tudo (o bucket do state fica, vazio de recursos)
+./deploy.sh us-east-1                               # outra região: usa envs/<regiao>.tfvars se existir, senão os padrões
+```
+
+Sem o script, os mesmos passos à mão: `(cd bootstrap && terraform init && terraform apply -var region=sa-east-1)`,
+`terraform init -backend-config=envs/sa-east-1.backend.hcl` (o arquivo tem o bucket da conta do grupo; em outra
+conta use o `backend_hcl` impresso pelo bootstrap) e `terraform apply -var-file=envs/sa-east-1.tfvars`.
 
 Nova versão: commit e `terraform apply` de novo. A tag das imagens é um hash do código: mudou o código, o CodeBuild
 constrói a tag nova, a migração roda (nova revisão da task definition) e os serviços trocam de revisão; o circuit
@@ -50,10 +70,11 @@ Para usar imagens publicadas de outro jeito (`push.sh`), passe `-var image_tag=<
 Trocar as senhas dos usuários de banco: `-var db_password_version=2` (grava novas senhas, roda a migração, que faz
 `ALTER ROLE`, e força novas tasks).
 
-O bucket do state é o único pré-requisito fora deste módulo: o backend precisa existir antes do `terraform init`.
+O bucket do state precisa existir antes do `terraform init` (o backend não pode criar o próprio bucket); o
+`deploy.sh` resolve isso com o `bootstrap/`.
 
-Outra região: copie `envs/sa-east-1.*` para a nova região (bucket do bootstrap, `region`, `vpc_cidr`, perfil do
-Bedrock disponível lá). AMI (parâmetro SSM), zonas (data source), endpoints, ARNs e imagens (construídas no ECR da
+Outra região: `./deploy.sh <regiao>` usa os padrões (`vpc_cidr` 10.30.0.0/16, perfil `global.` do Bedrock); para
+ajustar, crie `envs/<regiao>.tfvars`. AMI (parâmetro SSM), zonas (data source), endpoints, ARNs e imagens (construídas no ECR da
 própria região) são obtidos ali; nenhum recurso fica fora da região do ambiente.
 
 ## Decisões

@@ -21,10 +21,28 @@ reais** (tool use) para consultar catálogo, estoque e pedidos — nunca inventa
                                    └──────────────────────────────────┘
 ```
 
-Arquitetura na AWS (rede, zonas, borda, capacidade, mensageria, observabilidade e auditoria):
-[`docs/arquitetura.svg`](docs/arquitetura.svg) (PNG para slides: `docs/arquitetura.png`).
+**Implantar na AWS:** `cd infra/terraform && ./deploy.sh sa-east-1`: um comando, sem passos manuais, cria a
+infraestrutura completa e a aplicação, e imprime a URL ([detalhes](#implantar-na-aws-terraform)).
+**Rodar no computador:** `docker compose up --build`, depois abrir http://localhost:8000, sem nenhuma credencial
+([detalhes](#subindo-localmente)).
+
+## Arquitetura na AWS
 
 ![Arquitetura na AWS](docs/arquitetura.svg)
+
+Fonte editável em [`docs/arquitetura.svg`](docs/arquitetura.svg) (PNG para slides: `docs/arquitetura.png`).
+
+| Camada | Recursos (todos criados pelo Terraform) |
+|---|---|
+| Rede | VPC 10.30.0.0/16 em 2 zonas: sub-redes públicas (ALB, NAT), de aplicação e de dados, privadas; IGW, 1 NAT, endpoint S3 |
+| Entrada | Application Load Balancer em HTTP (porta 80), único ponto público; health check em `/health` |
+| Computação | ECS sobre EC2: Auto Scaling Group (t3.medium, 2–4 instâncias, sem IP público) + capacity provider com managed scaling; 3 serviços com auto scaling (chat por requisições no ALB, commerce por CPU, worker pelo tamanho da fila); Service Connect entre eles |
+| Dados | RDS PostgreSQL privado e criptografado; um usuário de banco por serviço com GRANTs mínimos; migração como task avulsa a cada deploy |
+| Mensageria | SQS `orders` + DLQ (5 tentativas); outbox no commerce-api e consumidor idempotente no order-worker |
+| IA | Amazon Bedrock (Claude Haiku 5.5, API Converse com tool use) pela IAM Role da task do chat-api |
+| Segurança | Secrets Manager (senhas fora do código, das imagens e do state), uma IAM Role por serviço, SGs encadeados ALB → instâncias → RDS, ECR imutável com scan |
+| Observabilidade | logs JSON no CloudWatch, 15 metric filters, alarmes → SNS, dashboard; CloudTrail multirregião com alarmes de segurança |
+| Entrega | CodeBuild constrói as imagens dentro do `terraform apply` (tag = hash do código); deploy rolling com circuit breaker |
 
 ## Estrutura
 
@@ -51,26 +69,57 @@ Cada serviço tem `Dockerfile` multi-stage: `runtime` (imagem final, python:3.12
 10001, sem deps de dev) e `test` (pytest). Os serviços são autocontidos — cada build context é a pasta
 do serviço.
 
-## Na AWS: estado e como continuar
+## Implantar na AWS (Terraform)
+
+O Terraform em [`infra/terraform/`](infra/terraform/) cria **tudo** a partir de uma conta vazia, em um único
+comando e sem nenhuma intervenção manual: rede, cluster, banco, fila, segredos, IAM, observabilidade, auditoria,
+o build das imagens, a migração do banco e os serviços. Testado do zero: 173 recursos em ~9 min
+([`docs/resultados/recriacao-sp.md`](docs/resultados/recriacao-sp.md)).
+
+**Pré-requisitos**
+- Conta AWS com permissão de administrador.
+- Terraform ≥ 1.11, AWS CLI v2, `bash` e `python3`. O **AWS CloudShell** já tem tudo, menos o Terraform (veja abaixo).
+  Docker não é necessário: as imagens são construídas na AWS pelo CodeBuild.
+- Acesso ao Claude Haiku no Bedrock: em conta que nunca usou modelos da Anthropic, a AWS pode pedir uma vez o
+  formulário de caso de uso no console do Bedrock. É um aceite da conta, fora do alcance do Terraform. Sem ele a
+  infraestrutura sobe inteira, mas o chat responde "assistente indisponível".
+
+**Implantar** (CloudShell de sa-east-1 ou qualquer terminal com credenciais da AWS):
+
+```bash
+# só no CloudShell: instalar o Terraform (uma vez por sessão)
+curl -sLo /tmp/tf.zip https://releases.hashicorp.com/terraform/1.11.4/terraform_1.11.4_linux_amd64.zip
+mkdir -p ~/bin && unzip -o /tmp/tf.zip -d ~/bin && export PATH=~/bin:$PATH TF_DATA_DIR=/tmp/tfdata
+
+git clone <url deste repositório> && cd projetocloud/infra/terraform
+./deploy.sh sa-east-1            # ~10 min; no fim imprime: Endereço da aplicação: http://setup-pronto-alb-….elb.amazonaws.com/
+```
+
+O `deploy.sh` cria o bucket do state remoto (S3, criptografado e versionado) se ele não existir, faz o
+`terraform init` apontando para ele e roda `terraform apply -auto-approve`. Outras ações:
+
+```bash
+./deploy.sh sa-east-1 plan       # mostra o que mudaria
+./deploy.sh sa-east-1 destroy    # remove todo o ambiente
+```
+
+Nova versão do código: `./deploy.sh` de novo. A tag das imagens é um hash do código, então só o que mudou é
+reconstruído e implantado (rolling deploy com circuit breaker). Detalhes, arquivos e decisões:
+[`infra/terraform/README.md`](infra/terraform/README.md).
+
+**Custo**: o ambiente cobra por hora enquanto existe (EC2, NAT Gateway, ALB e RDS são os maiores itens).
+`./deploy.sh <regiao> destroy` zera o custo; `ops/pausar.sh <regiao>` só para as instâncias e o RDS, sem destruir nada.
+
+### Ambientes do grupo
 
 | Etapa | Região | Como foi feita | Endereço |
 |---|---|---|---|
-| Manual | Ohio (us-east-2) | `docs/etapa-manual-ohio/` (AWS CLI no CloudShell) | `http://setup-pronto-alb-562905076.us-east-2.elb.amazonaws.com/` |
-| Terraform | São Paulo (sa-east-1) | `infra/terraform/` (state no S3) | `terraform output url` (ALB, HTTP) |
+| Manual | Ohio (us-east-2) | `docs/etapa-manual-ohio/` (AWS CLI no CloudShell) | pausado fora das sessões (`ops/retomar.sh us-east-2`) |
+| Terraform | São Paulo (sa-east-1) | `infra/terraform/` (state no S3) | `terraform output url`, o DNS do ALB em HTTP |
 
-Os dois ambientes ficam **pausados** fora das sessões de trabalho, porque custam por hora. Para religar:
-- São Paulo: `terraform apply` com a tag publicada (ver `infra/terraform/README.md`).
-- Ohio: `ops/retomar.sh us-east-2`.
-
-Para pausar de novo: `ops/pausar.sh us-east-2 sa-east-1`.
-
-Para trabalhar na AWS, cada pessoa precisa:
-- de um usuário no IAM Identity Center da conta `202757356229`, com o permission set `AdministratorAccess`;
-- do CloudShell da região, ou da AWS CLI com `aws sso login`.
-
-Não há senha nem chave para repassar: os segredos ficam no Secrets Manager, e o state do Terraform fica no bucket
-`setup-pronto-tfstate-202757356229-sa-east-1`. As imagens são construídas pelo próprio `terraform apply` (CodeBuild, tag = hash do código); `./push.sh` continua
-disponível para publicar manualmente (com `-var image_tag`).
+Não há senha nem chave para repassar: os segredos ficam no Secrets Manager, e cada pessoa entra pelo IAM Identity
+Center (CloudShell ou `aws sso login`). `./push.sh` continua disponível para publicar imagens à mão (com
+`-var image_tag`).
 
 ## Subindo localmente
 
@@ -139,21 +188,24 @@ TEST_DB_ADMIN_URL=postgresql+psycopg://postgres:postgres_local@localhost:5432/po
 |---|---|
 | commerce-api (27) | idempotência do POST /orders (repetição, chave com outro conteúdo → 409, 8 requisições concorrentes → 1 pedido), preço recalculado no servidor, compatibilidade (conexão, adaptador/hub, SO, layout, Hz por porta, VESA/tamanho do suporte), desconto progressivo limitado por produto, outbox com fila fora do ar, reconciliação (pedido parado é reenviado uma vez por janela, recente/já processado não, travado para após N reenvios, uma task por vez) |
 | order-worker (8) | confirmação, estoque insuficiente em um item → REJEITADO sem reservar nada, reentrega da mesma mensagem só apaga, entregas duplicadas simultâneas, dois pedidos pela última unidade, erro transitório não apaga, mensagem inválida fica para a DLQ |
-| chat-api (10) | tool use com dados do commerce, correlation_id propagado, commerce fora do ar → resposta fixa e turno não gravado, LLM fora, limite de iterações, janela de histórico, histórico gravado limitado, idempotency key estável, BedrockProvider (inference profile, toolConfig, erro → LLMError) |
+| chat-api (16) | tool use com dados do commerce, correlation_id propagado, commerce fora do ar → resposta fixa e turno não gravado, LLM fora, limite de iterações, janela de histórico, histórico gravado limitado, idempotency key estável, BedrockProvider (inference profile, toolConfig, erro → LLMError), vitrine, acompanhamento só do pedido da própria conversa, kit e pedido reconstruídos do histórico, página servida |
 
 ### Status da validação
 
 | Item | Status |
 |---|---|
-| Testes automatizados nos containers (commerce 27, worker 8, chat 10) | ✅ passando |
+| Testes automatizados nos containers (commerce 27, worker 8, chat 16) | ✅ passando |
 | `docker compose up --build` no modo fake: build das 4 imagens, job `migrate`, ElasticMQ e health checks | ✅ testado |
 | Roteiro de demonstração completo no modo fake (kit de R$ 889,64 → R$ 986,40, pedido CONFIRMADO pelo worker) | ✅ testado |
 | Modo Bedrock (`docker-compose.bedrock.yml`) com o Claude Haiku 5.5 real | ✅ testado |
-| Deploy na AWS (ECS + ALB + RDS + SQS) | ⏳ pendente |
+| Deploy na AWS: manual em Ohio e Terraform em São Paulo (do zero, em um apply) | ✅ testado |
+| Carga em degraus, perda/drenagem de instância, DLQ, reconciliação ([`docs/resultados/`](docs/resultados/)) | ✅ testado |
 
 ## Roteiro de demonstração
 
-Na página (há botões com estas frases) ou via `curl -X POST localhost:8000/chat -H 'Content-Type: application/json' -d '{"conversation_id": "...", "message": "..."}'`:
+Na página, o consultor abre com um assistente de 3 passos (computador → o que procura → conexões, sistema,
+layout) que monta a primeira mensagem; depois há sugestões dos próximos passos. Também dá para digitar as frases
+abaixo ou usar `curl -X POST localhost:8000/chat -H 'Content-Type: application/json' -d '{"conversation_id": "...", "message": "..."}'`:
 
 1. **Busca** — "Tenho um MacBook Air só com USB-C e Bluetooth, uso macOS. Procuro teclado e mouse sem fio."
    → lista teclados e mouses que suportam macOS, com preço e estoque.

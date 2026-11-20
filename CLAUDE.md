@@ -76,6 +76,9 @@ Os testes criam um banco temporário, aplicam as migrações de `db/` (`DB_MIGRA
 Hoje: commerce 27, worker 8, chat 16 testes.
 
 Imagens: construídas pelo `terraform apply` (CodeBuild); `./push.sh <regiao> <conta>` só para uso manual com `-var image_tag`. Handoff de infra: `docs/infra-handoff.md`.
+AWS do zero ou atualização: `infra/terraform/deploy.sh <regiao> [apply|plan|destroy]` (cria o bucket do state pelo
+`bootstrap/` se faltar, init com o bucket derivado da conta, apply `-auto-approve`). É o caminho da entrega ("sem
+intervenção manual"); o `envs/sa-east-1.backend.hcl` tem o bucket da conta do grupo e só serve para ela.
 
 ## Convenções
 - Python 3.12, FastAPI, SQLAlchemy Core com SQL explícito (`text()`), psycopg 3. Sem ORM.
