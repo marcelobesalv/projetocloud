@@ -71,8 +71,12 @@ O que a página mostra e vale apontar (tudo vem do sistema, não do texto do LLM
 - o cartão **"Seu kit"** com a cotação do `calcular_kit` (itens, desconto por linha, total e a próxima faixa);
 - o **acompanhamento do pedido** (recebido → reserva de estoque → confirmado), atualizado sozinho a partir do banco.
 
-1. "Tenho um MacBook Air só com USB-C e Bluetooth, uso macOS. Procuro teclado e mouse sem fio." → lista com preço e
-   estoque **do catálogo**.
+1. No painel do consultor, o **assistente de 3 passos**: computador (MacBook, Mac de mesa, notebook Windows — Asus,
+   Dell, Lenovo…, PC de mesa, Linux, outro) → o que procura → conexões, sistema, layout, Hz e "sem fio", já
+   preenchidos pelo tipo de computador e editáveis. Ele monta a mensagem (prévia na tela), p.ex. "Tenho um MacBook com
+   USB-C e Bluetooth, uso macOS. … Procuro teclado e mouse sem fio." → lista com preço e estoque **do catálogo**.
+   As sugestões seguintes são genéricas (compatibilidade, kit, desconto, mousepad, fechar pedido, status); para os
+   valores exatos abaixo, digite o kit do passo 3 em vez de usar "Montar um kit com os melhores".
 2. "Esses são compatíveis com meu Mac? Prefiro layout ABNT2." → descarta os que são só US e o mouse com receptor USB-A
    (sugere adaptador): a regra de compatibilidade rodou no commerce-api.
 3. "Monta um kit com o Logitech K380 ABNT2 grafite, o Pebble Mouse 2 grafite e o headset Zone Vibe 100 grafite." →
